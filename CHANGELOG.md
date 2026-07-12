@@ -7,6 +7,7 @@
 - compact habit, wellbeing and application cards without trailing whitespace;
 - thinner daily-chart scrolling and clearer value labels;
 - rounded dashboard status banners and an Overview navigation label;
+- responsive Russian Overview and Breathing layouts at the minimum window size;
 - consistent turquoise switch styling in both themes.
 
 ## 0.1.0 — 2026-07-13

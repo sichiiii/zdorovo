@@ -9,6 +9,7 @@ Highlights:
 - a thinner daily-chart scrollbar and clearer values above hourly bars;
 - compact habit, wellbeing and application cards without trailing space;
 - rounded status banners and a clearer Overview navigation label;
+- responsive Russian Overview and Breathing layouts at the minimum window size;
 - consistent turquoise switches in the light and dark themes;
 - six real interface screenshots generated from a private demo profile;
 - a completely rewritten English README.

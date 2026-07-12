@@ -3377,11 +3377,13 @@ class MainWindow(Adw.ApplicationWindow):
         content.append(cards)
 
         health_grid = Gtk.Grid(column_spacing=12, row_spacing=12)
-        health_grid.set_column_homogeneous(True)
+        health_grid.set_column_homogeneous(False)
+        health_grid.set_hexpand(True)
         wellness = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "wellness-card"]
         )
         wellness.set_valign(Gtk.Align.START)
+        wellness.set_hexpand(True)
         wellness.append(Gtk.Label(label="Самочувствие сейчас", xalign=0, css_classes=["section-title"]))
         wellness.append(
             Gtk.Label(
@@ -3439,6 +3441,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         quick = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "quick-card"])
         quick.set_valign(Gtk.Align.START)
+        quick.set_size_request(250, -1)
         quick.append(Gtk.Label(label="Быстрый старт", xalign=0, css_classes=["section-title"]))
         quick.append(
             Gtk.Label(
@@ -3453,7 +3456,14 @@ class MainWindow(Adw.ApplicationWindow):
             button = Gtk.Button(css_classes=["quick-action"])
             button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, halign=Gtk.Align.CENTER)
             button_box.append(activity_icon(kind, 19))
-            button_box.append(Gtk.Label(label=title))
+            button_box.append(
+                Gtk.Label(
+                    label=title,
+                    wrap=True,
+                    max_width_chars=9,
+                    justify=Gtk.Justification.CENTER,
+                )
+            )
             button.set_child(button_box)
             button.connect("clicked", lambda _button, selected=kind: self.app.scheduler.trigger(selected))
             quick_buttons.append(button)
@@ -3603,7 +3613,7 @@ class MainWindow(Adw.ApplicationWindow):
             for index, (label_text, value_text) in enumerate(
                 (
                     (
-                        "Duration" if self.language == "en" else "Длительность",
+                        "Duration" if self.language == "en" else "Время",
                         format_duration(float(preset["duration"]), self.language),
                     ),
                     (

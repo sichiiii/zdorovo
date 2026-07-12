@@ -40,10 +40,10 @@ CAPTURES = (
 )
 
 
-def seed_demo(app: healthbreak.ZdorovoApplication) -> None:
+def seed_demo(app: healthbreak.ZdorovoApplication, language: str = "en") -> None:
     app.config.data.update(
         {
-            "language": "en",
+            "language": language,
             "language_selected": True,
             "dark_mode": False,
             "notification_center_initialized": True,
@@ -152,12 +152,26 @@ def save_window(window: Gtk.Window, path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--page", choices=[name for name, _page, _dark in CAPTURES])
+    parser.add_argument("--language", choices=("en", "ru"), default="en")
+    parser.add_argument("--width", type=int, default=1280)
+    parser.add_argument("--height", type=int, default=800)
     args = parser.parse_args()
     if not args.page:
         try:
             for name, _page, _dark in CAPTURES:
                 subprocess.run(
-                    [sys.executable, str(Path(__file__).resolve()), "--page", name],
+                    [
+                        sys.executable,
+                        str(Path(__file__).resolve()),
+                        "--page",
+                        name,
+                        "--language",
+                        args.language,
+                        "--width",
+                        str(args.width),
+                        "--height",
+                        str(args.height),
+                    ],
                     check=True,
                 )
             return 0
@@ -167,7 +181,7 @@ def main() -> int:
     captures = tuple(capture for capture in CAPTURES if capture[0] == args.page)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     app = healthbreak.ZdorovoApplication()
-    seed_demo(app)
+    seed_demo(app, args.language)
     state = {"index": 0}
 
     def capture_current() -> bool:
@@ -175,7 +189,8 @@ def main() -> int:
         if window is None:
             return GLib.SOURCE_REMOVE
         name, _page, _dark = captures[state["index"]]
-        save_window(window, OUTPUT / f"{name}.png")
+        suffix = "" if args.language == "en" else f"-{args.language}"
+        save_window(window, OUTPUT / f"{name}{suffix}.png")
         state["index"] += 1
         if state["index"] >= len(captures):
             app.quit()
@@ -203,7 +218,7 @@ def main() -> int:
     def wait_for_window() -> bool:
         if app.window is None:
             return GLib.SOURCE_CONTINUE
-        app.window.set_default_size(1280, 800)
+        app.window.set_default_size(args.width, args.height)
         app.window.present()
         GLib.timeout_add(700, show_next)
         return GLib.SOURCE_REMOVE

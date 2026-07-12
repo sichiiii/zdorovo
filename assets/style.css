@@ -763,7 +763,7 @@ scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-wi
 .breathing-presets { margin-top: 1px; }
 .breathing-preset {
   min-height: 142px;
-  padding: 12px 13px;
+  padding: 11px 10px;
   color: #504a5e;
   background: rgba(255,255,255,0.50);
   border: 1px solid rgba(83,68,77,0.10);
@@ -783,7 +783,7 @@ scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-wi
 }
 .breathing-preset-stats { margin-top: 6px; }
 .breathing-preset-stat {
-  padding: 6px 7px;
+  padding: 6px 5px;
   background: rgba(67,50,57,0.045);
   border-radius: 6px;
 }
