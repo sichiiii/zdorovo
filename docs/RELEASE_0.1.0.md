@@ -27,7 +27,7 @@ sudo apt install ./zdorovo_0.1.0_all.deb
 SHA-256:
 
 ```text
-3e7f5a68afde02b070077de83ec9b6fe7c5408ded3fe4bb28807ad520e0ff824
+9e7480b9580c4ff6c1752621db023e99dcab8287aa01a6e1461dcea7c94851c6
 ```
 
 После установки откройте Zdorovo из списка приложений. Фоновые службы будут
