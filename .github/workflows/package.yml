@@ -21,15 +21,18 @@ jobs:
             python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 \
             gir1.2-atspi-2.0 gir1.2-graphene-1.0 at-spi2-core
       - name: Build
-        run: dpkg-buildpackage --build=binary --no-sign
+        run: |
+          dpkg-buildpackage --build=binary --no-sign
+          mkdir -p dist
+          cp ../zdorovo_*.deb dist/
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: zdorovo-deb
-          path: ../zdorovo_*.deb
+          path: dist/*.deb
       - name: Attach package to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ../zdorovo_*.deb
+          files: dist/*.deb
           generate_release_notes: false
