@@ -13,7 +13,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertIn(
             f'version="{version}"', (ROOT / "data" / "io.github.jabka.Zdorovo.metainfo.xml").read_text()
         )
-        self.assertIn(f"release-{version}", (ROOT / "README.md").read_text())
+        self.assertIn(f"zdorovo_{version}_all.deb", (ROOT / "README.md").read_text())
 
     def test_desktop_icon_is_packaged(self):
         desktop = (ROOT / "data" / "io.github.jabka.Zdorovo.desktop").read_text()

@@ -83,6 +83,13 @@ class CoreTests(unittest.TestCase):
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
         self.assertIn("Gtk.STYLE_PROVIDER_PRIORITY_USER + 1", source)
 
+    def test_system_notifications_include_visible_details(self):
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn('settings.set_boolean("force-expanded", True)', source)
+        self.assertIn("notification.set_body", source)
+        self.assertIn("Gio.NotificationPriority.HIGH", source)
+        self.assertIn("notification.set_icon", source)
+
     def test_guided_steps_cover_the_whole_timer(self):
         self.assertEqual(MODULE.guided_step_seconds(45, 5, [10, 5, 10, 5, 15]), [10, 5, 10, 5, 15])
         self.assertEqual(sum(MODULE.guided_step_seconds(181, 4)), 181)

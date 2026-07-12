@@ -37,11 +37,27 @@ scale > trough > slider {
 scale:hover > trough > highlight,
 scale:active > trough > highlight { background: #2B756F; }
 scale > trough > slider:hover { background: #2B756F; }
+switch {
+  color: #667270;
+  background: #D7DDDC;
+  background-image: none;
+  border: 1px solid rgba(63,91,88,0.18);
+  box-shadow: none;
+}
+switch:hover { background: #CCD5D4; border-color: rgba(50,127,121,0.30); }
 switch:checked, switch:checked:hover, switch:checked:active {
   color: white;
   background: #327F79;
+  background-image: none;
+  border-color: #327F79;
+  box-shadow: none;
 }
-switch:checked > slider { background: white; }
+switch > slider {
+  background: #F7FAF9;
+  border: 1px solid rgba(42,73,70,0.12);
+  box-shadow: 0 1px 3px rgba(29,58,55,0.16);
+}
+switch:checked > slider { background: white; border-color: rgba(255,255,255,0.76); }
 check:checked, radio:checked {
   color: white;
   background: #327F79;
@@ -176,6 +192,18 @@ window {
 .hero-control-button:hover { background: rgba(255,255,255,0.26); border-color: rgba(255,255,255,0.72); }
 .hero-control-button:active { background: rgba(255,255,255,0.34); box-shadow: inset 0 2px rgba(255,255,255,0.22); }
 .hero-control-button image { color: white; -gtk-icon-size: 18px; }
+.status-banner {
+  min-height: 38px;
+  margin: 0 2px;
+  padding: 0 14px;
+  color: #285F5A;
+  background: rgba(216,241,238,0.88);
+  border: 1px solid rgba(50,127,121,0.18);
+  border-radius: 11px;
+  box-shadow: inset 0 1px rgba(255,255,255,0.62), 0 7px 18px rgba(40,84,80,0.08);
+  font-size: 12px;
+  font-weight: 760;
+}
 
 .settings-hero {
   background: rgba(255,255,255,0.52);
@@ -318,6 +346,7 @@ window {
   margin-bottom: 9px;
   box-shadow: inset 0 1px rgba(255,255,255,0.74), 0 10px 26px rgba(40,84,80,0.065);
 }
+.boxed-list row:last-child { margin-bottom: 0; }
 .boxed-list row:focus { outline-color: #327F79; }
 .app-icon-shell {
   min-width: 38px;
@@ -490,7 +519,19 @@ window {
 .range-calendar-hint { min-height: 20px; padding: 2px 3px 0; color: #776b72; font-size: 9px; }
 .day-chart-scroll, .day-chart-scroll viewport { background: transparent; border: 0; }
 .day-chart-scroll { min-height: 286px; }
-.day-chart-scroll scrollbar.horizontal { min-height: 7px; margin-top: 3px; }
+.day-chart-scroll scrollbar.horizontal {
+  min-height: 4px;
+  margin: 6px 8px 0;
+  padding: 0;
+  background: transparent;
+}
+.day-chart-scroll scrollbar.horizontal trough { min-height: 3px; padding: 0; background: transparent; }
+.day-chart-scroll scrollbar.horizontal slider {
+  min-height: 3px;
+  margin: 0;
+  border: 0;
+  background: rgba(50,127,121,0.34);
+}
 .chart-toggle {
   min-width: 32px;
   min-height: 32px;
@@ -775,7 +816,7 @@ scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-wi
   border: 0;
   box-shadow: none;
 }
-.habit-card { min-height: 215px; padding: 14px; }
+.habit-card { min-height: 0; padding: 14px; }
 .habit-icon-shell {
   min-width: 38px;
   min-height: 38px;
@@ -978,6 +1019,18 @@ scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-wi
 .dark-mode .sidebar stacksidebar row { color: #d6cdd0; }
 .dark-mode .sidebar stacksidebar row:hover { background: rgba(255,255,255,0.07); }
 .dark-mode .sidebar stacksidebar row:selected { color: white; background: #327F79; }
+.dark-mode switch:not(:checked) {
+  color: #b8b0b3;
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.13);
+}
+.dark-mode switch:not(:checked):hover { background: rgba(255,255,255,0.17); }
+.dark-mode .status-banner {
+  color: #C9EEEA;
+  background: rgba(50,127,121,0.20);
+  border-color: rgba(158,216,210,0.20);
+  box-shadow: inset 0 1px rgba(255,255,255,0.06), 0 7px 18px rgba(0,0,0,0.16);
+}
 .dark-mode .page-title, .dark-mode .section-title, .dark-mode .card-title,
 .dark-mode .settings-title, .dark-mode .metric-value { color: #f5eff1; }
 .dark-mode .muted, .dark-mode .metric-label, .dark-mode .settings-hero-copy { color: #aaa0a4; }

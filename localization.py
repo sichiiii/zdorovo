@@ -8,6 +8,7 @@ UI_EN = {
     "Тёмная тема": "Dark theme",
     "ВАШ РИТМ": "YOUR RHYTHM",
     "Сегодня": "Today",
+    "Обзор": "Overview",
     "Аналитика": "Analytics",
     "Настройки": "Settings",
     "Важно": "Important",

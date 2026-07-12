@@ -37,7 +37,7 @@ from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.1"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -2070,6 +2070,22 @@ def notification_badge_text(unread: int) -> str:
     return "9+" if unread > 9 else str(unread)
 
 
+def ensure_expanded_system_notifications() -> None:
+    """Ask GNOME to display this application's notification body in banners."""
+    source = Gio.SettingsSchemaSource.get_default()
+    if not source or not source.lookup("org.gnome.desktop.notifications.application", True):
+        return
+    try:
+        settings = Gio.Settings.new_with_path(
+            "org.gnome.desktop.notifications.application",
+            "/org/gnome/desktop/notifications/application/io-github-jabka-zdorovo/",
+        )
+        if not settings.get_boolean("force-expanded"):
+            settings.set_boolean("force-expanded", True)
+    except GLib.Error:
+        return
+
+
 def breathing_phase(preset: dict[str, Any], elapsed: float) -> tuple[str, float]:
     if elapsed <= 0:
         return "ready", 0.0
@@ -2103,6 +2119,14 @@ def symbolic_icon(icon_name: str, size: int = 22, css_class: str = "settings-ico
     image.set_pixel_size(size)
     shell.set_center_widget(image)
     return shell
+
+
+def status_banner(title: str) -> Gtk.Revealer:
+    revealer = Gtk.Revealer(transition_type=Gtk.RevealerTransitionType.SLIDE_DOWN)
+    surface = Gtk.CenterBox(css_classes=["status-banner"])
+    surface.set_center_widget(Gtk.Label(label=title, wrap=True, justify=Gtk.Justification.CENTER))
+    revealer.set_child(surface)
+    return revealer
 
 
 def achievement_emblem(icon: str, tone: str, level: int, unlocked: bool) -> Gtk.Widget:
@@ -2590,7 +2614,7 @@ class DayActivityChart(Gtk.DrawingArea):
         self._hovered: dict[str, Any] | None = None
         self._pointer = (0.0, 0.0)
         self.set_content_width(1440)
-        self.set_content_height(270)
+        self.set_content_height(276)
         self.set_hexpand(True)
         self.set_draw_func(self._draw)
         motion = Gtk.EventControllerMotion()
@@ -2651,7 +2675,7 @@ class DayActivityChart(Gtk.DrawingArea):
         bins = self._bins()
         totals = [sum(value for _category, value in values) for values in bins]
         max_value = max(totals, default=1) or 1
-        left, right, top, bottom = 20, 12, 34, 32
+        left, right, top, bottom = 20, 12, 40, 40
         chart_w, chart_h = width - left - right, height - top - bottom
         dark = Adw.StyleManager.get_default().get_dark()
         for index in range(4):
@@ -2704,18 +2728,23 @@ class DayActivityChart(Gtk.DrawingArea):
                     cursor = y
                 cr.restore()
                 total_label = self._compact_duration(total)
-                cr.set_source_rgba(0.91, 0.86, 0.88, 1) if dark else cr.set_source_rgba(0.30, 0.27, 0.36, 1)
                 cr.select_font_face("Sans", 0, 1)
-                cr.set_font_size(9)
+                cr.set_font_size(11)
                 total_ext = cr.text_extents(total_label)
-                cr.move_to(x + bar_w / 2 - total_ext.width / 2, max(12, base_y - total_h - 7))
+                label_x = x + bar_w / 2 - total_ext.width / 2
+                label_y = max(18, base_y - total_h - 10)
+                cr.set_source_rgba(0.12, 0.11, 0.14, 0.76) if dark else cr.set_source_rgba(1, 1, 1, 0.88)
+                rounded_rect(cr, label_x - 5, label_y - 13, total_ext.width + 10, 18, 6)
+                cr.fill()
+                cr.set_source_rgba(0.96, 0.93, 0.94, 1) if dark else cr.set_source_rgba(0.23, 0.21, 0.29, 1)
+                cr.move_to(label_x, label_y)
                 cr.show_text(total_label)
             label = f"{start_hour:02d}"
             cr.set_source_rgba(0.76, 0.72, 0.74, 1) if dark else cr.set_source_rgba(0.42, 0.39, 0.49, 1)
             cr.select_font_face("Sans", 0, 0)
-            cr.set_font_size(9)
+            cr.set_font_size(10)
             ext = cr.text_extents(label)
-            cr.move_to(x + bar_w / 2 - ext.width / 2, height - 9)
+            cr.move_to(x + bar_w / 2 - ext.width / 2, height - 14)
             cr.show_text(label)
         if self._hovered:
             hit = self._hovered
@@ -3103,7 +3132,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.analytics = self._build_analytics()
         self.settings_page = self._build_settings()
         self.health_page = self._build_health()
-        self.stack.add_titled(self.dashboard, "today", self._t("Сегодня"))
+        self.stack.add_titled(self.dashboard, "today", self._t("Обзор"))
         self.stack.get_page(self.dashboard).set_icon_name("view-grid-symbolic")
         self.stack.add_titled(self.breathing_page, "breathing", self._t("Дыхание"))
         self.stack.get_page(self.breathing_page).set_icon_name("weather-windy-symbolic")
@@ -3323,20 +3352,18 @@ class MainWindow(Adw.ApplicationWindow):
         hero.append(hero_copy)
         hero.append(hero_controls)
         content.append(hero)
-        self.manual_pause_banner = Adw.Banner(
-            title="Напоминания на паузе · экранное время продолжает считаться"
-        )
-        self.manual_pause_banner.set_revealed(bool(self.app.config.data["manual_pause"]))
+        self.manual_pause_banner = status_banner("Напоминания на паузе · экранное время продолжает считаться")
+        self.manual_pause_banner.set_reveal_child(bool(self.app.config.data["manual_pause"]))
         content.append(self.manual_pause_banner)
-        self.screen_share_banner = Adw.Banner(
-            title="Идёт демонстрация экрана · напоминания отложены, экранное время считается"
+        self.screen_share_banner = status_banner(
+            "Идёт демонстрация экрана · напоминания отложены, экранное время считается"
         )
-        self.screen_share_banner.set_revealed(False)
+        self.screen_share_banner.set_reveal_child(False)
         content.append(self.screen_share_banner)
-        self.tracking_banner = Adw.Banner(
-            title="Считается общее активное время · по приложениям — после следующего входа в GNOME"
+        self.tracking_banner = status_banner(
+            "Считается общее активное время · по приложениям — после следующего входа в GNOME"
         )
-        self.tracking_banner.set_revealed(not self.app.scheduler.extension_live())
+        self.tracking_banner.set_reveal_child(not self.app.scheduler.extension_live())
         content.append(self.tracking_banner)
         cards = Gtk.Grid(column_spacing=14, row_spacing=14, column_homogeneous=True)
         self.screen_value = Gtk.Label(css_classes=["metric-value"], xalign=0)
@@ -3354,6 +3381,7 @@ class MainWindow(Adw.ApplicationWindow):
         wellness = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "wellness-card"]
         )
+        wellness.set_valign(Gtk.Align.START)
         wellness.append(Gtk.Label(label="Самочувствие сейчас", xalign=0, css_classes=["section-title"]))
         wellness.append(
             Gtk.Label(
@@ -3410,6 +3438,7 @@ class MainWindow(Adw.ApplicationWindow):
         health_grid.attach(wellness, 0, 0, 2, 1)
 
         quick = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "quick-card"])
+        quick.set_valign(Gtk.Align.START)
         quick.append(Gtk.Label(label="Быстрый старт", xalign=0, css_classes=["section-title"]))
         quick.append(
             Gtk.Label(
@@ -3431,7 +3460,6 @@ class MainWindow(Adw.ApplicationWindow):
         quick.append(quick_buttons)
         quick_context = Gtk.CenterBox(
             orientation=Gtk.Orientation.VERTICAL,
-            vexpand=True,
             css_classes=["quick-context"],
         )
         quick_context_copy = Gtk.Box(
@@ -4349,6 +4377,7 @@ class MainWindow(Adw.ApplicationWindow):
             vscrollbar_policy=Gtk.PolicyType.NEVER,
             css_classes=["day-chart-scroll"],
         )
+        day_chart_scroll.set_overlay_scrolling(True)
         day_chart_scroll.set_child(self.day_chart)
         day_card.append(day_chart_scroll)
         content.append(day_card)
@@ -5313,12 +5342,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     def refresh(self, rebuild_lists: bool = True) -> None:
         self._refresh_notification_center()
-        self.manual_pause_banner.set_revealed(bool(self.app.config.data["manual_pause"]))
+        self.manual_pause_banner.set_reveal_child(bool(self.app.config.data["manual_pause"]))
         activity = self.app.scheduler.read_activity()
-        self.screen_share_banner.set_revealed(
+        self.screen_share_banner.set_reveal_child(
             bool(self.app.config.data.get("pause_on_screen_share", True)) and activity.screen_sharing
         )
-        self.tracking_banner.set_revealed(self.app.scheduler.activity_source == "session")
+        self.tracking_banner.set_reveal_child(self.app.scheduler.activity_source == "session")
         self.screen_value.set_text(format_duration(self.app.db.total_for_day(), self.language))
         done, _ = self.app.db.reminder_counts()
         self.breaks_value.set_text(str(done))
@@ -5887,6 +5916,7 @@ class ZdorovoApplication(Adw.Application):
         self.apply_color_scheme()
         self.hold()
         self._load_css()
+        ensure_expanded_system_notifications()
         if not bool(self.config.data.get("notification_center_initialized", False)):
             language = str(self.config.data.get("language", "en"))
             self.db.add_notification(
@@ -6050,8 +6080,10 @@ class ZdorovoApplication(Adw.Application):
     ) -> str:
         notification_id = self.db.add_notification(kind, title, body, page, notification_id=notification_id)
         if system:
-            notification = Gio.Notification.new(title)
-            notification.set_body(body)
+            notification = Gio.Notification.new(title.strip() or "Zdorovo")
+            notification.set_body(body.strip() or title.strip())
+            notification.set_icon(Gio.ThemedIcon.new(APP_ICON_NAME))
+            notification.set_priority(Gio.NotificationPriority.HIGH)
             target = GLib.Variant("s", page)
             notification.set_default_action_and_target("app.show-page", target)
             if button:

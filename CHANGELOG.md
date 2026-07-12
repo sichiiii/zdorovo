@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 — 2026-07-13
+
+- public English project page with reproducible application screenshots;
+- detailed GNOME system notifications with app icon and high priority;
+- compact habit, wellbeing and application cards without trailing whitespace;
+- thinner daily-chart scrolling and clearer value labels;
+- rounded dashboard status banners and an Overview navigation label;
+- consistent turquoise switch styling in both themes.
+
 ## 0.1.0 — 2026-07-13
 
 First packaged release.

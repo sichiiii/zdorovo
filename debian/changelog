@@ -1,6 +1,14 @@
+zdorovo (0.1.1) unstable; urgency=medium
+
+  * Publish the project with an English screenshot-led README.
+  * Add expanded, high-priority system notification details.
+  * Refine dashboard spacing, habit cards, application lists and chart controls.
+  * Replace the dashboard label with Overview and restyle status banners.
+
+ -- CYBERJABKA <sichiiii@users.noreply.github.com>  Mon, 13 Jul 2026 02:30:00 +0300
+
 zdorovo (0.1.0) unstable; urgency=medium
 
   * Initial packaged release.
 
- -- sichiiii <sichiiii@users.noreply.github.com>  Mon, 13 Jul 2026 12:00:00 +0300
-
+ -- sichiiii <sichiiii@users.noreply.github.com>  Sun, 12 Jul 2026 23:55:00 +0300
