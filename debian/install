@@ -1,0 +1,13 @@
+healthbreak.py usr/lib/zdorovo
+indicator.py usr/lib/zdorovo
+launch.sh usr/lib/zdorovo
+localization.py usr/lib/zdorovo
+assets usr/share/zdorovo
+assets/io.github.jabka.Zdorovo.svg usr/share/icons/hicolor/scalable/apps
+extension/extension.js usr/share/gnome-shell/extensions/zdorovo@jabka.github.io
+extension/metadata.json usr/share/gnome-shell/extensions/zdorovo@jabka.github.io
+data/io.github.jabka.Zdorovo.desktop usr/share/applications
+data/io.github.jabka.Zdorovo.metainfo.xml usr/share/metainfo
+data/zdorovo usr/bin
+data/zdorovo.service usr/lib/systemd/user
+data/zdorovo-indicator.service usr/lib/systemd/user

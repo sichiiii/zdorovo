@@ -1,0 +1,19 @@
+name: Feature request
+description: Предложить улучшение
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Задача
+      description: Какую реальную проблему должно решить изменение?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предложение
+    validations:
+      required: true
+

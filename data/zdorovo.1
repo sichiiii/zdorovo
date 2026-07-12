@@ -1,0 +1,36 @@
+.TH ZDOROVO 1 "13 July 2026" "Zdorovo 0.1.0" "User Commands"
+.SH NAME
+zdorovo \- guided health breaks and local screen-time analytics
+.SH SYNOPSIS
+.B zdorovo
+.RI [ options ]
+.SH DESCRIPTION
+.B Zdorovo
+runs configurable eye, movement and posture reminders during active computer
+work. The desktop application also provides breathing sessions, habit tracking
+and local per-application analytics.
+.SH OPTIONS
+.TP
+.B \--background
+Start tracking without opening the main window.
+.TP
+.B \--trigger KIND
+Open a reminder immediately. KIND is one of eyes, general, neck, drops, back,
+wrists, breathing or water.
+.TP
+.B \--version
+Print the installed version.
+.TP
+.B \-h, \--help
+Show command-line help.
+.SH FILES
+.TP
+.I ~/.config/zdorovo/config.json
+User settings.
+.TP
+.I ~/.local/share/zdorovo/usage.sqlite3
+Screen-time, exercise, habit and wellbeing history.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR gnome-extensions (1)
+

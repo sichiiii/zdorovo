@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Zdorovo
+Source: https://github.com/sichiiii/zdorovo
+
+Files: *
+Copyright: 2026 CYBERJABKA
+License: LicenseRef-Proprietary
+ All rights reserved. No permission is granted to copy, modify, redistribute
+ or publish this work without prior written permission from the copyright holder.

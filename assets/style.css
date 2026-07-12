@@ -1,0 +1,1147 @@
+@define-color accent #327F79;
+@define-color accent_bg_color #327F79;
+@define-color accent_color #327F79;
+@define-color accent_fg_color white;
+@define-color accent_soft rgba(50, 127, 121, 0.13);
+
+/* The app stylesheet is loaded above GTK user styles so controls keep the
+   same accent on supported GTK releases, including GTK 4.14. */
+*:focus-visible { outline-color: rgba(50,127,121,0.58); }
+entry selection, textview text selection, label selection {
+  color: #164B47;
+  background: #B7E2DD;
+}
+link, link:visited { color: #246B66; }
+scale {
+  min-height: 14px;
+  padding: 5px 0;
+}
+scale > trough {
+  min-height: 3px;
+  border-radius: 99px;
+}
+scale > trough > highlight,
+scale > trough > fill {
+  min-height: 3px;
+  background: #327F79;
+  border-color: #327F79;
+}
+scale > trough > slider {
+  min-width: 10px;
+  min-height: 10px;
+  margin: -4px;
+  background: #327F79;
+  border: 1px solid white;
+  box-shadow: 0 1px 4px rgba(35,92,87,0.22);
+}
+scale:hover > trough > highlight,
+scale:active > trough > highlight { background: #2B756F; }
+scale > trough > slider:hover { background: #2B756F; }
+switch:checked, switch:checked:hover, switch:checked:active {
+  color: white;
+  background: #327F79;
+}
+switch:checked > slider { background: white; }
+check:checked, radio:checked {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+button.suggested-action, button.accent {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+button.suggested-action:hover, button.accent:hover {
+  color: white;
+  background: #2B756F;
+  border-color: #2B756F;
+}
+button:checked {
+  color: #246B66;
+  background: #D8F1EE;
+  border-color: rgba(50,127,121,0.34);
+}
+spinbutton button:hover { color: #246B66; background: rgba(216,241,238,0.72); }
+
+window {
+  color: #26243b;
+  background: #EEF7F6;
+}
+.glass-toolbar, .glass-page, .main-split { background: transparent; }
+.topbar {
+  color: #292640;
+  background: rgba(245, 251, 250, 0.72);
+  border-bottom: 1px solid rgba(255,255,255,0.78);
+  box-shadow: inset 0 1px rgba(255,255,255,0.78), 0 8px 24px rgba(48, 42, 98, 0.055);
+}
+.app-title { font-size: 18px; font-weight: 850; letter-spacing: -0.3px; }
+.sidebar {
+  background: rgba(239, 247, 246, 0.74);
+  border-right: 1px solid rgba(58,94,90,0.13);
+  border-radius: 0;
+  box-shadow: inset -1px 0 rgba(255,255,255,0.54);
+}
+.main-split > separator { min-width: 0; background: transparent; }
+.sidebar stacksidebar, .sidebar stacksidebar list, .sidebar list,
+.sidebar viewport, .sidebar scrolledwindow {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.sidebar stacksidebar row {
+  color: #514d6b;
+  background: transparent;
+  border-radius: 8px;
+  margin: 3px 10px;
+  padding: 9px 11px;
+}
+.sidebar stacksidebar row:hover { background: rgba(255,255,255,0.68); }
+.sidebar stacksidebar row:selected,
+.sidebar stacksidebar row:selected:hover,
+.sidebar stacksidebar row:selected:active {
+  color: white;
+  background-color: #327F79;
+  background-image: none;
+  border: 1px solid rgba(255,255,255,0.58);
+  box-shadow: inset 0 1px rgba(255,255,255,0.32), 0 8px 20px rgba(45,103,97,0.22);
+}
+.sidebar stacksidebar row:selected label, .sidebar stacksidebar row:selected image { color: white; }
+.sidebar-kicker, .overlay-kicker {
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.7px;
+  color: #327F79;
+}
+.page-content { background: transparent; }
+.app-footer {
+  margin: 2px 24px 18px;
+  color: #777f7e;
+  font-size: 10px;
+}
+.app-footer link { color: #648682; text-decoration-line: none; }
+.app-footer link:hover { color: #327F79; text-decoration-line: underline; }
+.overlay-footer { margin: 4px 0 0; }
+.page-title { font-size: 28px; font-weight: 850; letter-spacing: -0.7px; color: #242238; }
+.section-title { font-size: 16px; font-weight: 780; color: #2e2b43; }
+.card-title { font-size: 14px; font-weight: 750; color: #302d47; }
+.muted { color: #77738d; }
+.caption { font-size: 12px; }
+.body-copy { color: #514d67; line-height: 1.35; }
+
+.card, .settings-card {
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(255,255,255,0.72);
+  box-shadow: inset 0 1px rgba(255,255,255,0.78), 0 14px 34px rgba(40,84,80,0.075);
+}
+.card { border-radius: 13px; padding: 16px; }
+.card:hover, .settings-card:hover {
+  background: rgba(255,255,255,0.66);
+  border-color: rgba(255,255,255,0.92);
+  box-shadow: 0 16px 38px rgba(40,84,80,0.13);
+}
+.hero-card {
+  background: rgba(43, 117, 111, 0.92);
+  border: 1px solid rgba(255,255,255,0.42);
+  border-radius: 18px;
+  padding: 25px 28px;
+  min-height: 145px;
+  box-shadow: inset 0 1px rgba(255,255,255,0.32), 0 18px 48px rgba(39,92,87,0.24);
+}
+.hero-kicker { color: #C5EBE7; font-size: 10px; font-weight: 850; letter-spacing: 1.7px; }
+.hero-title { color: white; font-size: 26px; font-weight: 850; letter-spacing: -0.5px; }
+.hero-copy { color: rgba(244,255,253,0.84); font-size: 13px; }
+.hero-orb {
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.48);
+  border-radius: 999px;
+  min-width: 96px;
+  min-height: 96px;
+  box-shadow: inset 0 2px rgba(255,255,255,0.40), 0 10px 28px rgba(19,15,54,0.18);
+}
+.hero-number { color: white; font-size: 34px; font-weight: 850; }
+.hero-unit { color: #D5F1EE; font-size: 11px; font-weight: 750; letter-spacing: 0.5px; }
+.hero-control-button {
+  color: white;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.48);
+  border-radius: 9999px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  margin: 0;
+  box-shadow: inset 0 1px rgba(255,255,255,0.38), 0 8px 22px rgba(20,15,58,0.20);
+}
+.hero-control-button:hover { background: rgba(255,255,255,0.26); border-color: rgba(255,255,255,0.72); }
+.hero-control-button:active { background: rgba(255,255,255,0.34); box-shadow: inset 0 2px rgba(255,255,255,0.22); }
+.hero-control-button image { color: white; -gtk-icon-size: 18px; }
+
+.settings-hero {
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(255,255,255,0.76);
+  border-radius: 16px;
+  padding: 17px 19px;
+  box-shadow: inset 0 1px rgba(255,255,255,0.82), 0 12px 32px rgba(40,84,80,0.07);
+}
+.settings-hero-icon {
+  color: #327F79;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid white;
+  border-radius: 10px;
+  padding: 9px;
+  box-shadow: 0 7px 18px rgba(52,103,98,0.12);
+}
+.settings-hero-title { color: #2e2a49; font-size: 19px; font-weight: 830; }
+.settings-hero-copy { color: #6e6887; font-size: 13px; }
+.settings-card { border-radius: 13px; padding: 14px; min-height: 0; }
+.language-card { padding: 12px 14px; }
+.language-icon {
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 9px;
+  color: #327F79;
+  background: rgba(255,255,255,0.62);
+}
+.language-picker button {
+  min-width: 142px;
+  min-height: 36px;
+  padding: 2px 11px;
+  color: #3d394f;
+  font-weight: 720;
+  background: rgba(255,255,255,0.68);
+  border: 1px solid rgba(255,255,255,0.90);
+  border-radius: 9px;
+  box-shadow: none;
+}
+.language-picker button:hover { color: #246B66; background: rgba(255,255,255,0.92); }
+.language-picker button label { color: #746d80; font-weight: 700; }
+.language-picker button:hover label { color: #625b70; }
+.language-picker popover contents {
+  padding: 5px;
+  background: rgba(250,248,250,0.98);
+  border: 1px solid rgba(50,127,121,0.12);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(30,24,37,0.18);
+}
+.language-picker popover row { border-radius: 7px; padding: 7px 9px; }
+.language-picker popover row:selected { color: white; background: #327F79; }
+.snooze-settings-card { min-height: 48px; }
+.snooze-settings-card .frequency-control { min-width: 200px; }
+.wellness-reminder-settings-card { min-height: 48px; }
+.backup-card { min-height: 48px; }
+.data-button {
+  min-height: 34px;
+  padding: 2px 12px;
+  border-radius: 8px;
+  color: #5e5562;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow: none;
+  font-weight: 720;
+}
+.data-button:hover { color: #246B66; background: rgba(255,255,255,0.88); }
+.data-primary { color: white; background: #327F79; border-color: #327F79; }
+.data-primary:hover { color: white; background: #2B756F; border-color: #2B756F; }
+.backup-status { color: #5f735f; background: rgba(81,145,89,0.10); border-radius: 7px; padding: 7px 9px; }
+.backup-status.error { color: #922933; background: rgba(169,45,54,0.10); }
+.settings-icon, .activity-icon-shell, .reminder-icon-shell {
+  background: rgba(220,241,238,0.76);
+  border: 1px solid rgba(255,255,255,0.98);
+  box-shadow: 0 7px 18px rgba(52,103,98,0.10);
+}
+.settings-icon { border-radius: 8px; min-width: 40px; min-height: 40px; color: #327F79; }
+.reminder-icon-shell { border-radius: 8px; min-width: 35px; min-height: 35px; }
+.activity-icon-shell { border-radius: 8px; min-width: 37px; min-height: 37px; }
+.settings-title { color: #302d47; font-size: 14px; font-weight: 770; }
+.frequency-control {
+  background: rgba(237,237,248,0.72);
+  border: 1px solid rgba(255,255,255,0.88);
+  border-radius: 9px;
+  padding: 3px;
+}
+.frequency-value { color: #526764; font-weight: 760; }
+.step-button {
+  min-width: 31px;
+  min-height: 31px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.94);
+  background: rgba(255,255,255,0.76);
+  color: #327F79;
+  box-shadow: 0 3px 10px rgba(48,92,88,0.07);
+}
+.step-button:hover { background: white; }
+.step-button:active { background: #D8F1EE; color: #246B66; }
+.test-button {
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.94);
+  background: rgba(242,250,249,0.78);
+  color: #327F79;
+  font-weight: 740;
+  min-height: 30px;
+  padding: 4px 11px;
+  box-shadow: none;
+}
+.test-button:hover { background: rgba(255,255,255,0.94); color: #246B66; border-color: white; }
+.test-button:active { background: #D8F1EE; }
+.privacy-card {
+  background: rgba(255,255,255,0.50);
+  border: 1px solid rgba(255,255,255,0.96);
+  border-radius: 14px;
+  padding: 21px;
+  box-shadow: 0 12px 30px rgba(45,116,87,0.07);
+}
+.privacy-icon { color: #327F79; background: rgba(255,255,255,0.82); border: 1px solid white; border-radius: 999px; min-width: 40px; min-height: 40px; }
+
+.metric-card { min-height: 98px; }
+.metric-label { color: #69657e; font-weight: 650; }
+.metric-value { font-size: 25px; font-weight: 840; color: #29263f; }
+.accent-text { color: #327F79; font-weight: 760; }
+.reminder-card { min-height: 76px; }
+.warning-card {
+  background: rgba(255,246,236,0.72);
+  border: 1px solid rgba(255,255,255,0.96);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 12px 30px rgba(143,89,38,0.07);
+}
+
+.boxed-list {
+  background: transparent;
+  border: 0;
+}
+.boxed-list row {
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(255,255,255,0.70);
+  border-radius: 12px;
+  margin-bottom: 9px;
+  box-shadow: inset 0 1px rgba(255,255,255,0.74), 0 10px 26px rgba(40,84,80,0.065);
+}
+.boxed-list row:focus { outline-color: #327F79; }
+.app-icon-shell {
+  min-width: 38px;
+  min-height: 38px;
+  margin-left: 4px;
+  margin-right: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: none;
+}
+.exercise-list .reminder-icon-shell { margin-right: 9px; }
+.wellness-card { padding: 14px 16px; }
+.wellness-row { min-height: 24px; }
+.wellness-label { color: #4f4b63; font-size: 12px; font-weight: 680; }
+.wellness-row scale {
+  min-height: 14px;
+  padding: 0;
+}
+.wellness-row scale trough { min-height: 3px; }
+.wellness-row scale > trough > highlight,
+.wellness-row scale > trough > fill {
+  min-height: 3px;
+  background-color: #327F79;
+  background-image: none;
+  border-radius: 99px;
+}
+.wellness-row scale slider {
+  min-width: 10px;
+  min-height: 10px;
+  margin: -4px;
+  background: #327F79;
+  border: 1px solid white;
+  box-shadow: 0 1px 4px rgba(35,92,87,0.20);
+}
+.wellness-score { color: #327F79; font-size: 15px; font-weight: 850; }
+.health-primary {
+  color: white;
+  background: #327F79;
+  border: 0;
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 2px 12px;
+  font-weight: 760;
+}
+.health-primary:hover { background: #2B756F; }
+.quick-card { padding: 14px 16px; }
+.quick-action {
+  min-height: 74px;
+  padding: 7px;
+  border-radius: 9px;
+  color: #4b465f;
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(255,255,255,0.88);
+  box-shadow: none;
+}
+.quick-action:hover { color: #327F79; background: rgba(255,255,255,0.82); }
+.quick-context {
+  min-height: 76px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: rgba(50,127,121,0.075);
+  border: 1px solid rgba(50,127,121,0.10);
+}
+.quick-context-kicker { color: #327F79; font-size: 9px; font-weight: 850; letter-spacing: 1.1px; }
+.quick-context-title { color: #302d47; font-size: 14px; font-weight: 780; }
+.wellness-history row label { margin-left: 4px; }
+.wellness-legend { margin-top: 4px; }
+.wellness-summary {
+  background: rgba(243,240,242,0.70);
+  border: 1px solid rgba(255,255,255,0.78);
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+.wellness-summary-value { color: #2d293d; font-size: 18px; font-weight: 830; }
+.chart-legend-title { margin-top: 4px; }
+.day-nav-button {
+  min-height: 30px;
+  padding: 1px 9px;
+  border-radius: 8px;
+  color: #5d5564;
+  background: rgba(255,255,255,0.54);
+  border: 1px solid rgba(255,255,255,0.80);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.day-nav-button:hover { color: #246B66; background: rgba(255,255,255,0.86); }
+.day-nav-button:disabled { opacity: 0.38; }
+.day-chart-date { min-width: 90px; color: #302d47; font-size: 12px; font-weight: 800; }
+.day-date-button {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.day-date-button > button, .day-date-button button {
+  min-height: 34px;
+  padding: 1px 11px;
+  border-radius: 9px;
+  color: #246B66;
+  background: rgba(50,127,121,0.08);
+  border: 1px solid rgba(50,127,121,0.25);
+  box-shadow: none;
+  font-weight: 760;
+}
+.day-date-button > button:hover, .day-date-button button:hover,
+.day-date-button > button:checked, .day-date-button button:checked {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+.day-date-button image { color: currentColor; -gtk-icon-size: 14px; }
+.day-date-button popover contents {
+  padding: 3px;
+  border-radius: 11px;
+  background: rgba(250,248,250,0.98);
+  border: 1px solid rgba(50,127,121,0.12);
+  box-shadow: 0 16px 38px rgba(30,24,37,0.20);
+}
+.range-calendar {
+  min-width: 184px;
+  padding: 3px;
+  color: #3e3947;
+  background: #F3F9F8;
+  border-radius: 9px;
+}
+.range-calendar-header {
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(50,127,121,0.07);
+}
+.range-month-title { color: #302b35; font-size: 12px; font-weight: 800; }
+.range-month-button {
+  min-width: 25px;
+  min-height: 25px;
+  padding: 0;
+  color: #6b5660;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+}
+.range-month-button:hover { color: white; background: #327F79; }
+.range-calendar-grid { margin: 0; }
+.range-weekday { padding: 3px 0 4px; color: #8b7e84; font-size: 9px; font-weight: 800; }
+.range-day {
+  min-width: 23px;
+  min-height: 25px;
+  margin: 1px 0;
+  padding: 0;
+  color: #514953;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+.range-day:hover { color: #246B66; background: rgba(50,127,121,0.13); }
+.range-day.range-inside { color: #246B66; background: rgba(50,127,121,0.13); }
+.range-day.range-preview { background: rgba(50,127,121,0.19); }
+.range-day.range-start, .range-day.range-end {
+  color: white;
+  background: #327F79;
+  border-radius: 8px;
+}
+.range-day:disabled { opacity: 0.24; }
+.range-calendar-hint { min-height: 20px; padding: 2px 3px 0; color: #776b72; font-size: 9px; }
+.day-chart-scroll, .day-chart-scroll viewport { background: transparent; border: 0; }
+.day-chart-scroll { min-height: 286px; }
+.day-chart-scroll scrollbar.horizontal { min-height: 7px; margin-top: 3px; }
+.chart-toggle {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  color: #327F79;
+  background: rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.82);
+  box-shadow: none;
+  margin-left: 10px;
+}
+.chart-toggle:checked { color: white; background: #327F79; border-color: #327F79; }
+.chart-toggle:hover { color: white; background: #2B756F; border-color: #2B756F; }
+.chart-toggle:not(:checked) { color: #7b7180; background: rgba(255,255,255,0.42); }
+.symptom-metric {
+  background: rgba(243,240,242,0.70);
+  border: 1px solid rgba(255,255,255,0.78);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.symptom-title { color: #4e495d; font-size: 13px; font-weight: 720; }
+.symptom-score { color: #302d47; font-size: 15px; font-weight: 840; }
+.symptom-bar { min-height: 8px; }
+.symptom-bar trough { min-height: 8px; background: rgba(73,66,118,0.13); border-radius: 99px; }
+.symptom-bar block { min-height: 8px; border: 0; }
+.symptom-headache block.filled { background: #7A5FA8; }
+.symptom-eyes block.filled { background: #3479C3; }
+.symptom-neck block.filled { background: #7050AE; }
+.symptom-back block.filled { background: #E47B1D; }
+.wellness-insight {
+  color: #625b70;
+  background: rgba(235,232,240,0.66);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.exercise-metric {
+  background: rgba(243,240,242,0.70);
+  border: 1px solid rgba(255,255,255,0.78);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.exercise-value { color: #2d293d; font-size: 21px; font-weight: 840; }
+.exercise-flow { margin-top: 2px; background: transparent; }
+.exercise-flow flowboxchild {
+  min-width: 320px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.exercise-result-card {
+  min-height: 56px;
+  padding: 9px 11px;
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(255,255,255,0.70);
+  border-radius: 10px;
+  box-shadow: inset 0 1px rgba(255,255,255,0.68);
+}
+.exercise-icon-shell {
+  min-width: 38px;
+  min-height: 38px;
+  color: #327F79;
+  background: rgba(220,241,238,0.68);
+  border-radius: 8px;
+}
+.exercise-row-title { color: #302d47; font-size: 14px; font-weight: 770; }
+.exercise-stats { margin-top: 1px; }
+.exercise-stat {
+  min-height: 24px;
+  padding: 1px 8px;
+  border-radius: 7px;
+  background: rgba(238,236,241,0.78);
+  border: 1px solid rgba(255,255,255,0.66);
+}
+.exercise-stat-label { color: #777080; font-size: 11px; }
+.exercise-stat-value { color: #3b3544; font-size: 11px; font-weight: 820; }
+.exercise-stat-done { background: rgba(61,137,87,0.10); }
+.exercise-stat-time { background: rgba(65,100,165,0.10); }
+.exercise-stat-postponed { background: rgba(214,164,74,0.13); }
+progressbar { background: transparent; border: 0; box-shadow: none; padding: 0; }
+progressbar trough {
+  min-height: 7px;
+  min-width: 150px;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(73,66,118,0.13);
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+progressbar progress, progressbar > trough > progress {
+  min-height: 7px;
+  min-width: 0;
+  border: 0;
+  border-radius: 99px;
+  background: #327F79;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+
+scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-width: 5px; min-height: 5px; }
+
+.notification-button {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  color: #3f5553;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.notification-button > button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 1px 8px;
+  color: #3f5553;
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(50,127,121,0.22);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.notification-button > button:hover,
+.notification-button > button:checked {
+  color: #246B66;
+  background: rgba(226,244,242,0.92);
+  border-color: rgba(50,127,121,0.40);
+}
+.notification-title-control { padding: 0 1px; }
+.notification-button .app-title { color: #2c3f3d; font-size: 16px; }
+.notification-button > button:hover .app-title,
+.notification-button > button:checked .app-title { color: #246B66; }
+.notification-title-separator {
+  min-height: 18px;
+  margin: 0 1px;
+  background: rgba(50,127,121,0.20);
+}
+.notification-badge {
+  min-width: 15px;
+  min-height: 15px;
+  padding: 0 2px;
+  margin-top: -4px;
+  margin-right: -5px;
+  color: white;
+  background: #327F79;
+  border: 2px solid #EEF7F6;
+  border-radius: 99px;
+  font-size: 8px;
+  font-weight: 900;
+}
+.notification-popover contents {
+  padding: 0;
+  background: rgba(246,251,250,0.98);
+  border: 1px solid rgba(50,127,121,0.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(30,24,37,0.22);
+}
+.notification-center { min-width: 350px; padding: 12px; }
+.notification-scroll { min-height: 90px; background: transparent; }
+.notification-scroll viewport { background: transparent; }
+.notification-read-all {
+  min-height: 28px;
+  padding: 1px 9px;
+  color: #776d77;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 11px;
+}
+.notification-read-all:hover { color: #327F79; background: rgba(50,127,121,0.07); }
+.notification-row {
+  padding: 9px;
+  color: #3e3947;
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(74,60,68,0.08);
+  border-radius: 9px;
+  box-shadow: none;
+}
+.notification-row:hover { background: rgba(255,255,255,0.78); border-color: rgba(50,127,121,0.16); }
+.notification-row.unread { border-left: 3px solid #327F79; }
+.notification-icon {
+  min-width: 34px;
+  min-height: 34px;
+  color: #327F79;
+  background: rgba(216,241,238,0.82);
+  border-radius: 8px;
+}
+.notification-title { color: #302d47; font-size: 12px; font-weight: 780; }
+.notification-time { color: #9a9199; font-size: 9px; }
+.notification-empty { min-height: 110px; padding: 20px; }
+.notification-empty image { color: #a49aa2; -gtk-icon-size: 30px; }
+
+.breathing-guide-card {
+  min-height: 260px;
+  padding: 18px 22px;
+  color: white;
+  background: #294D4A;
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 16px;
+  box-shadow: 0 18px 42px rgba(27,74,70,0.22);
+}
+.breathing-visual { min-width: 240px; min-height: 240px; }
+.breathing-orb { min-width: 240px; min-height: 240px; }
+.breathing-orb-copy { min-width: 130px; }
+.breathing-phase { color: #C5EBE7; font-size: 11px; font-weight: 850; letter-spacing: 1.2px; }
+.breathing-countdown { color: white; font-size: 31px; font-weight: 860; font-feature-settings: "tnum"; }
+.breathing-kicker { color: #9ED8D2; font-size: 9px; font-weight: 900; letter-spacing: 1.7px; }
+.breathing-program-title { color: white; font-size: 24px; font-weight: 850; }
+.breathing-program-copy { color: rgba(255,255,255,0.70); font-size: 12px; }
+.breathing-rhythm-chip {
+  min-width: 80px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 8px;
+}
+.breathing-rhythm-label { color: rgba(255,255,255,0.54); font-size: 8px; font-weight: 850; letter-spacing: 1px; }
+.breathing-rhythm-value { color: white; font-size: 15px; font-weight: 830; }
+.breathing-instruction {
+  min-height: 38px;
+  padding: 8px 10px;
+  color: rgba(255,255,255,0.76);
+  background: rgba(0,0,0,0.13);
+  border-left: 2px solid #5DB2AA;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.breathing-preset-card { padding: 13px 15px; }
+.breathing-presets { margin-top: 1px; }
+.breathing-preset {
+  min-height: 142px;
+  padding: 12px 13px;
+  color: #504a5e;
+  background: rgba(255,255,255,0.50);
+  border: 1px solid rgba(83,68,77,0.10);
+  border-radius: 9px;
+  box-shadow: none;
+}
+.breathing-preset:hover { color: #327F79; background: rgba(255,255,255,0.80); border-color: rgba(50,127,121,0.22); }
+.breathing-preset.selected { color: white; background: #327F79; border-color: #327F79; }
+.breathing-preset.selected .muted { color: rgba(255,255,255,0.76); }
+.breathing-preset .muted { color: #827884; }
+.breathing-preset-title { font-size: 14px; font-weight: 800; }
+.breathing-preset-description {
+  min-height: 38px;
+  color: #7b7180;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.breathing-preset-stats { margin-top: 6px; }
+.breathing-preset-stat {
+  padding: 6px 7px;
+  background: rgba(67,50,57,0.045);
+  border-radius: 6px;
+}
+.breathing-preset-stat-label { color: #8b8089; font-size: 10px; }
+.breathing-preset-stat-value { color: #4a424d; font-size: 12px; font-weight: 820; }
+.breathing-preset.selected .breathing-preset-description { color: rgba(255,255,255,0.72); }
+.breathing-preset.selected .breathing-preset-stat { background: rgba(255,255,255,0.10); }
+.breathing-preset.selected .breathing-preset-stat-label { color: rgba(255,255,255,0.58); }
+.breathing-preset.selected .breathing-preset-stat-value { color: white; }
+.breathing-primary { min-width: 160px; min-height: 38px; }
+.breathing-actions { margin-top: 2px; }
+.breathing-actions .data-button { min-height: 38px; }
+.breathing-guide-card .data-button {
+  color: rgba(255,255,255,0.78);
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+}
+.breathing-guide-card .data-button:hover { color: white; background: rgba(255,255,255,0.13); }
+.breathing-schedule-card { min-height: 104px; padding: 13px 15px; }
+.breathing-interval-row {
+  padding-top: 8px;
+  border-top: 1px solid rgba(75,62,70,0.09);
+}
+
+.habit-flow { background: transparent; }
+.habit-flow flowboxchild {
+  min-width: 330px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.habit-card { min-height: 215px; padding: 14px; }
+.habit-icon-shell {
+  min-width: 38px;
+  min-height: 38px;
+  color: #327F79;
+  background: rgba(220,241,238,0.72);
+  border: 1px solid rgba(255,255,255,0.94);
+  border-radius: 8px;
+}
+.habit-progress-value { color: #327F79; font-weight: 830; font-feature-settings: "tnum"; }
+.habit-progress trough { min-height: 7px; }
+.habit-progress progress { min-height: 7px; }
+.habit-done-button { min-width: 105px; }
+.habit-editor { margin-top: 8px; }
+.habit-editor entry, .habit-editor spinbutton {
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+.achievement-series-card { padding: 14px 15px; }
+.achievement-series-count {
+  color: #246B66;
+  background: rgba(50,127,121,0.10);
+  border: 1px solid rgba(50,127,121,0.16);
+  border-radius: 99px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 820;
+}
+.achievement-level {
+  min-height: 205px;
+  padding: 10px 8px;
+  border: 1px solid rgba(50,127,121,0.10);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.34);
+}
+.achievement-level.unlocked {
+  background: rgba(232,247,245,0.66);
+  border-color: rgba(50,127,121,0.24);
+}
+.achievement-level.next { border-color: rgba(50,127,121,0.22); }
+.achievement-level.locked { opacity: 0.58; }
+.achievement-emblem { min-width: 78px; min-height: 78px; }
+.achievement-emblem-ring {
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 999px;
+  border: 3px solid #4B9B94;
+  background: #E2F3F1;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,0.76), 0 8px 18px rgba(37,94,89,0.14);
+}
+.achievement-emblem.unlocked .achievement-emblem-ring {
+  border-color: #327F79;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,0.88), 0 9px 22px rgba(37,94,89,0.22);
+}
+.achievement-violet .achievement-emblem-ring { background: #EEEAF7; border-color: #8A78B5; }
+.achievement-green .achievement-emblem-ring { background: #E6F2E8; border-color: #65966D; }
+.achievement-sky .achievement-emblem-ring { background: #E5F1F6; border-color: #6193AA; }
+.achievement-amber .achievement-emblem-ring { background: #F5EFE1; border-color: #B48C4E; }
+.achievement-rose .achievement-emblem-ring { background: #F4E8EC; border-color: #AC7181; }
+.achievement-deep .achievement-emblem-ring { background: #E8EAEE; border-color: #637083; }
+.achievement-seal {
+  color: white;
+  background: #327F79;
+  border: 2px solid white;
+  border-radius: 99px;
+  margin: 0 1px 1px 0;
+  box-shadow: 0 3px 8px rgba(37,94,89,0.22);
+}
+.achievement-emblem.locked .achievement-seal { color: #706D76; background: #D9D8DB; }
+.achievement-level-mark { font-size: 9px; font-weight: 900; }
+.achievement-level-title { color: #302d47; font-size: 13px; font-weight: 820; }
+.achievement-description { min-height: 40px; }
+.achievement-progress trough { min-height: 4px; background: rgba(47,74,72,0.11); }
+.achievement-progress progress { min-height: 4px; background: #327F79; }
+.achievement-status { color: #327F79; font-size: 11px; font-weight: 780; }
+
+.break-window { background: #302a31; }
+.break-window.break-dark { background: #171419; }
+.overlay-bg { background: transparent; padding: 48px; }
+.break-card {
+  background: rgba(253,252,255,0.94);
+  border: 1px solid rgba(255,255,255,0.98);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.38);
+}
+.guide-picture { border-radius: 14px; }
+.overlay-title { font-size: 35px; font-weight: 850; color: #242234; }
+.overlay-step {
+  font-size: 17px;
+  color: #454158;
+  padding: 5px 0;
+  border-radius: 7px;
+}
+.overlay-step-current {
+  color: #246B66;
+  font-weight: 780;
+  background: rgba(50,127,121,0.09);
+}
+.overlay-step-done { color: rgba(69,65,88,0.48); }
+.overlay-note { background: rgba(235,232,250,0.82); color: #625b82; border-radius: 9px; padding: 14px; }
+.guided-timer {
+  background: rgba(242,237,239,0.90);
+  border: 1px solid rgba(50,127,121,0.13);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.guided-caption { color: #5e535c; font-size: 14px; font-weight: 650; }
+.guided-time { color: #246B66; font-size: 25px; font-weight: 850; font-feature-settings: "tnum"; }
+.guided-progress trough { min-height: 6px; background: rgba(55,83,80,0.12); }
+.guided-progress progress { min-height: 6px; background: #327F79; }
+.break-dark .break-card {
+  color: #f4eef1;
+  background: rgba(34,30,35,0.94);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 24px 80px rgba(0,0,0,0.48);
+}
+.break-dark .overlay-title { color: #faf4f6; }
+.break-dark .overlay-step { color: #d7cdd1; }
+.break-dark .overlay-step-current {
+  color: #C9EEEA;
+  background: rgba(50,127,121,0.27);
+}
+.break-dark .overlay-step-done { color: rgba(215,205,209,0.42); }
+.break-dark .overlay-note {
+  color: #c6bbc9;
+  background: rgba(101,88,113,0.24);
+}
+.break-dark .guided-timer {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.11);
+}
+.break-dark .guided-caption { color: #c9bec3; }
+.break-dark .guided-time { color: #B7E4DF; }
+.break-dark .guided-progress trough { background: rgba(255,255,255,0.12); }
+.break-dark .break-secondary {
+  color: #eee6e9;
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.14);
+}
+.break-dark .break-secondary:hover {
+  color: white;
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,255,255,0.22);
+}
+.break-actions { margin-top: 4px; }
+.break-button {
+  min-height: 46px;
+  border-radius: 10px;
+  padding: 0 18px;
+  font-weight: 780;
+  box-shadow: none;
+}
+.break-button image { -gtk-icon-size: 17px; }
+.break-secondary {
+  color: #514b6f;
+  background: rgba(245,244,251,0.88);
+  border: 1px solid rgba(122,112,161,0.20);
+}
+.break-secondary:hover {
+  color: #433b69;
+  background: white;
+  border-color: rgba(50,127,121,0.34);
+  box-shadow: 0 7px 18px rgba(44,82,79,0.10);
+}
+.break-secondary:active { background: #ece9fb; box-shadow: none; }
+.break-primary {
+  color: white;
+  background: #327F79;
+  border: 1px solid rgba(255,255,255,0.42);
+  box-shadow: 0 9px 22px rgba(46,105,99,0.25);
+}
+.break-primary:hover {
+  color: white;
+  background: #2B756F;
+  box-shadow: 0 12px 26px rgba(46,105,99,0.33);
+}
+.break-primary:active {
+  color: white;
+  background: #246B66;
+  box-shadow: 0 4px 12px rgba(46,105,99,0.20);
+}
+
+/* Dark theme: the same muted turquoise accent on a darker material field. */
+.dark-mode {
+  color: #f3eef0;
+  background: #171518;
+}
+.dark-mode .topbar {
+  color: #f3eef0;
+  background: rgba(31,28,32,0.82);
+  border-bottom-color: rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.20);
+}
+.dark-mode .sidebar {
+  background: rgba(32,28,31,0.78);
+  border-right-color: rgba(255,255,255,0.09);
+  box-shadow: inset -1px 0 rgba(255,255,255,0.035);
+}
+.dark-mode .sidebar stacksidebar row { color: #d6cdd0; }
+.dark-mode .sidebar stacksidebar row:hover { background: rgba(255,255,255,0.07); }
+.dark-mode .sidebar stacksidebar row:selected { color: white; background: #327F79; }
+.dark-mode .page-title, .dark-mode .section-title, .dark-mode .card-title,
+.dark-mode .settings-title, .dark-mode .metric-value { color: #f5eff1; }
+.dark-mode .muted, .dark-mode .metric-label, .dark-mode .settings-hero-copy { color: #aaa0a4; }
+.dark-mode .body-copy { color: #cfc5c8; }
+.dark-mode .app-footer { color: #7f8887; }
+.dark-mode .app-footer link { color: #82aaa6; }
+.dark-mode .app-footer link:hover { color: #9ED8D2; }
+.dark-mode .card, .dark-mode .settings-card {
+  background: rgba(45,40,44,0.64);
+  border-color: rgba(255,255,255,0.11);
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 14px 34px rgba(0,0,0,0.20);
+}
+.dark-mode .card:hover, .dark-mode .settings-card:hover {
+  background: rgba(53,47,52,0.76);
+  border-color: rgba(255,255,255,0.16);
+}
+.dark-mode .settings-hero, .dark-mode .privacy-card {
+  background: rgba(45,40,44,0.62);
+  border-color: rgba(255,255,255,0.11);
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 12px 32px rgba(0,0,0,0.18);
+}
+.dark-mode .settings-hero-title { color: #f5eff1; }
+.dark-mode .chart-toggle:checked { color: white; background: #327F79; border-color: #327F79; }
+.dark-mode .chart-toggle:not(:checked) { color: #bcb1b5; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
+.dark-mode .chart-toggle:hover { color: white; background: #2B756F; border-color: #2B756F; }
+.dark-mode .day-nav-button { color: #e0d6da; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.11); }
+.dark-mode .day-nav-button:hover { color: white; background: rgba(255,255,255,0.12); }
+.dark-mode .day-chart-date { color: #f5eff1; }
+.dark-mode .day-date-button { background: transparent; border: 0; }
+.dark-mode .day-date-button > button, .dark-mode .day-date-button button {
+  color: #C9EEEA;
+  background: rgba(50,127,121,0.18);
+  border-color: rgba(158,216,210,0.25);
+}
+.dark-mode .day-date-button > button:hover, .dark-mode .day-date-button button:hover,
+.dark-mode .day-date-button > button:checked, .dark-mode .day-date-button button:checked {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+.dark-mode .day-date-button popover contents { background: #282429; border-color: rgba(255,255,255,0.11); }
+.dark-mode .range-calendar { color: #eee7ea; background: #282429; }
+.dark-mode .range-calendar-header { background: rgba(50,127,121,0.16); }
+.dark-mode .range-month-title { color: #f4edef; }
+.dark-mode .range-month-button { color: #ddd3d7; }
+.dark-mode .range-month-button:hover { color: white; background: #327F79; }
+.dark-mode .range-weekday { color: #9f9298; }
+.dark-mode .range-day { color: #ddd3d7; }
+.dark-mode .range-day:hover { color: white; background: rgba(50,127,121,0.28); }
+.dark-mode .range-day.range-inside { color: #C9EEEA; background: rgba(50,127,121,0.24); }
+.dark-mode .range-day.range-preview { background: rgba(50,127,121,0.34); }
+.dark-mode .range-day.range-start, .dark-mode .range-day.range-end { color: white; background: #327F79; }
+.dark-mode .range-calendar-hint { color: #b9adb2; }
+.dark-mode .exercise-metric {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.09);
+}
+.dark-mode .exercise-value { color: #f5eff1; }
+.dark-mode .exercise-icon-shell { color: #9ED8D2; background: rgba(255,255,255,0.07); }
+.dark-mode .exercise-result-card { background: rgba(255,255,255,0.045); border-color: rgba(255,255,255,0.09); box-shadow: none; }
+.dark-mode .exercise-row-title { color: #f5eff1; }
+.dark-mode .exercise-stat { background: rgba(255,255,255,0.055); border-color: rgba(255,255,255,0.07); }
+.dark-mode .exercise-stat-label { color: #aaa0a4; }
+.dark-mode .exercise-stat-value { color: #f2ecee; }
+.dark-mode .exercise-stat-done { background: rgba(73,157,100,0.13); }
+.dark-mode .exercise-stat-time { background: rgba(76,119,190,0.14); }
+.dark-mode .exercise-stat-postponed { background: rgba(214,164,74,0.16); }
+.dark-mode .wellness-label { color: #d8d0d5; }
+.dark-mode .quick-action { color: #eee7eb; background: rgba(58,53,60,0.72); border-color: rgba(255,255,255,0.10); }
+.dark-mode .quick-action:hover { color: #9ED8D2; background: rgba(70,64,72,0.88); }
+.dark-mode .quick-context { background: rgba(50,127,121,0.13); border-color: rgba(158,216,210,0.10); }
+.dark-mode .quick-context-title { color: #f5eff1; }
+.dark-mode .wellness-summary { background: rgba(63,58,64,0.78); border-color: rgba(255,255,255,0.10); }
+.dark-mode .wellness-summary-value { color: #f5eff1; }
+.dark-mode .symptom-metric { background: rgba(255,255,255,0.055); border-color: rgba(255,255,255,0.09); }
+.dark-mode .symptom-title { color: #d8ced2; }
+.dark-mode .symptom-score { color: #f5eff1; }
+.dark-mode .wellness-insight { color: #c9bec3; background: rgba(255,255,255,0.055); }
+.dark-mode .language-icon { color: #9ED8D2; background: rgba(255,255,255,0.07); }
+.dark-mode .language-picker button { color: #f2ecee; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
+.dark-mode .language-picker button:hover { background: rgba(255,255,255,0.12); }
+.dark-mode .language-picker button label { color: #b8aeb3; }
+.dark-mode .language-picker button:hover label { color: #d7cdd1; }
+.dark-mode .language-picker popover contents { background: #282429; border-color: rgba(255,255,255,0.11); }
+.dark-mode .data-button { color: #e8dfe2; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
+.dark-mode .data-button:hover { color: white; background: rgba(255,255,255,0.12); }
+.dark-mode .data-primary { color: white; background: #327F79; border-color: #327F79; }
+.dark-mode .data-primary:hover { background: #2B756F; border-color: #2B756F; }
+.dark-mode .backup-status { color: #b8d3bb; background: rgba(91,153,99,0.13); }
+.dark-mode .backup-status.error { color: #ffb7be; background: rgba(169,45,54,0.18); }
+.dark-mode .settings-hero-icon, .dark-mode .settings-icon,
+.dark-mode .activity-icon-shell, .dark-mode .reminder-icon-shell,
+.dark-mode .privacy-icon {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: none;
+}
+.dark-mode .app-icon-shell { background: transparent; border: 0; box-shadow: none; }
+.dark-mode .frequency-control {
+  background: rgba(16,14,16,0.34);
+  border-color: rgba(255,255,255,0.08);
+}
+.dark-mode .frequency-value { color: #e3dade; }
+.dark-mode .step-button, .dark-mode .test-button {
+  color: #A9DDD8;
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.10);
+}
+.dark-mode .step-button:hover, .dark-mode .test-button:hover { background: rgba(255,255,255,0.12); color: #C9EEEA; }
+.dark-mode .warning-card {
+  background: rgba(75,51,39,0.54);
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+}
+.dark-mode .boxed-list row {
+  background: rgba(45,40,44,0.64);
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px rgba(255,255,255,0.07), 0 10px 26px rgba(0,0,0,0.18);
+}
+.dark-mode progressbar trough { background: rgba(255,255,255,0.12); }
+.dark-mode scrollbar slider { background: rgba(255,255,255,0.22); }
+.dark-mode .notification-button {
+  background: transparent;
+  border: 0;
+}
+.dark-mode .notification-button > button {
+  color: #d8ced2;
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(158,216,210,0.20);
+}
+.dark-mode .notification-button > button:hover,
+.dark-mode .notification-button > button:checked {
+  color: #9ED8D2;
+  background: rgba(50,127,121,0.16);
+  border-color: rgba(158,216,210,0.34);
+}
+.dark-mode .notification-button .app-title { color: #edf6f5; }
+.dark-mode .notification-button > button:hover .app-title,
+.dark-mode .notification-button > button:checked .app-title { color: #B7E4DF; }
+.dark-mode .notification-title-separator { background: rgba(158,216,210,0.22); }
+.dark-mode .notification-badge { border-color: #211e21; }
+.dark-mode .notification-popover contents { background: #282429; border-color: rgba(255,255,255,0.11); }
+.dark-mode .notification-row { color: #eee7ea; background: rgba(255,255,255,0.045); border-color: rgba(255,255,255,0.08); }
+.dark-mode .notification-row:hover { background: rgba(255,255,255,0.08); border-color: rgba(50,127,121,0.30); }
+.dark-mode .notification-title { color: #f5eff1; }
+.dark-mode .notification-icon { color: #9ED8D2; background: rgba(50,127,121,0.14); }
+.dark-mode .notification-read-all { color: #b9afb3; }
+.dark-mode .breathing-guide-card { background: #203A38; border-color: rgba(255,255,255,0.11); box-shadow: 0 18px 42px rgba(0,0,0,0.28); }
+.dark-mode .breathing-countdown { color: white; }
+.dark-mode .breathing-preset { color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.09); }
+.dark-mode .breathing-preset:hover { color: white; background: rgba(255,255,255,0.10); }
+.dark-mode .breathing-preset.selected { color: white; background: #327F79; border-color: #327F79; }
+.dark-mode .breathing-preset-description { color: #aaa0a4; }
+.dark-mode .breathing-preset-stat { background: rgba(255,255,255,0.045); }
+.dark-mode .breathing-preset-stat-label { color: #8f858a; }
+.dark-mode .breathing-preset-stat-value { color: #eee7ea; }
+.dark-mode .habit-icon-shell { color: #9ED8D2; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); }
+.dark-mode .breathing-interval-row { border-top-color: rgba(255,255,255,0.08); }
+.dark-mode .achievement-series-count { color: #B7E4DF; background: rgba(50,127,121,0.18); border-color: rgba(158,216,210,0.18); }
+.dark-mode .achievement-level { background: rgba(255,255,255,0.035); border-color: rgba(255,255,255,0.08); }
+.dark-mode .achievement-level.unlocked { background: rgba(50,127,121,0.12); border-color: rgba(158,216,210,0.20); }
+.dark-mode .achievement-level.next { border-color: rgba(158,216,210,0.18); }
+.dark-mode .achievement-level-title { color: #f2ecee; }
+.dark-mode .achievement-progress trough { background: rgba(255,255,255,0.11); }
+.dark-mode .achievement-status { color: #9ED8D2; }
+.dark-mode .achievement-emblem-ring { box-shadow: inset 0 0 0 4px rgba(28,25,29,0.52), 0 8px 18px rgba(0,0,0,0.24); }
+.dark-mode .achievement-seal { border-color: #282429; }

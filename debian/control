@@ -1,0 +1,33 @@
+Source: zdorovo
+Section: utils
+Priority: optional
+Maintainer: sichiiii <sichiiii@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://github.com/sichiiii/zdorovo
+
+Package: zdorovo
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ python3-gi,
+ python3-gi-cairo,
+ python3-cairo,
+ gir1.2-adw-1 (>= 1.4),
+ gir1.2-atspi-2.0,
+ gir1.2-ayatanaappindicator3-0.1,
+ gir1.2-graphene-1.0,
+ gir1.2-gtk-3.0,
+ gir1.2-gtk-4.0 (>= 4.12),
+ at-spi2-core,
+ libglib2.0-bin,
+ systemd
+Recommends: gnome-shell (>= 46), gnome-shell-extension-appindicator, gnome-session-canberra
+Description: guided health breaks and local screen-time analytics
+ Zdorovo schedules configurable eye, movement and posture breaks during active
+ computer work. It also provides breathing sessions, habit reminders, local
+ per-application screen-time analytics and wellbeing history.
+ .
+ All usage data stays in the user's home directory.

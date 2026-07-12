@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+	python3 -m unittest discover -s tests -v
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0755 debian/zdorovo/usr/bin/zdorovo
+	chmod 0755 debian/zdorovo/usr/lib/zdorovo/healthbreak.py
+	chmod 0755 debian/zdorovo/usr/lib/zdorovo/indicator.py
+	chmod 0755 debian/zdorovo/usr/lib/zdorovo/launch.sh

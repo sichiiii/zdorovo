@@ -1,0 +1,8 @@
+{
+  "uuid": "zdorovo@jabka.github.io",
+  "name": "Здорово — паузы и экранное время",
+  "description": "Active application and screen-sharing status for Zdorovo",
+  "shell-version": ["46", "47", "48", "49", "50"],
+  "version": 1,
+  "url": "https://github.com/sichiiii/zdorovo"
+}

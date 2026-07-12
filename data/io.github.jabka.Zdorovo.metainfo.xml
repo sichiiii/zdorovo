@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jabka.Zdorovo</id>
+  <name>Zdorovo</name>
+  <summary>Health breaks, breathing and screen-time analytics</summary>
+  <summary xml:lang="ru">Перерывы, дыхание и аналитика экранного времени</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="by.cyberjabka">
+    <name>CYBERJABKA</name>
+  </developer>
+  <description>
+    <p>
+      Zdorovo schedules guided breaks during active computer work, records local
+      screen-time statistics and keeps exercise, achievement and wellbeing history.
+    </p>
+    <p xml:lang="ru">
+      Здорово планирует короткие паузы во время активной работы, сохраняет
+      локальную статистику экранного времени, достижения и историю упражнений и
+      самочувствия.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.jabka.Zdorovo.desktop</launchable>
+  <url type="homepage">https://cyberjabka.by/</url>
+  <provides>
+    <binary>zdorovo</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-07-13"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>
