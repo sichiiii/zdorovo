@@ -25,11 +25,6 @@ jobs:
           dpkg-buildpackage --build=binary --no-sign
           mkdir -p dist
           cp ../zdorovo_*.deb dist/
-      - name: Upload package
-        uses: actions/upload-artifact@v4
-        with:
-          name: zdorovo-deb
-          path: dist/*.deb
       - name: Attach package to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
