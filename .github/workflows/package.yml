@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.created
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
