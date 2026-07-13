@@ -105,7 +105,7 @@ Download the current package from
 [GitHub Releases](https://github.com/sichiiii/zdorovo/releases/latest), then run:
 
 ```bash
-sudo apt install ./zdorovo_0.1.3_all.deb
+sudo apt install ./zdorovo_0.1.4_all.deb
 ```
 
 Open **Zdorovo** from the application list. Its user services start with the

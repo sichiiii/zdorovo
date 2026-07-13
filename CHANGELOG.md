@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 — 2026-07-13
+
+- fair rotation prevents the same completed activity from being selected twice in a row;
+- a repeated reminder waits for up to ten minutes when another enabled activity is nearly due;
+- due alternatives take priority while manual Quick start actions remain immediate;
+- the last completed activity is persisted across background-service restarts.
+
 ## 0.1.3 — 2026-07-13
 
 - media paused by Zdorovo resumes after both completing and postponing a reminder;

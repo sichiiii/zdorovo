@@ -188,6 +188,48 @@ class CoreTests(unittest.TestCase):
         finally:
             MODULE.pause_media_players = original_pause
 
+    def test_repeated_activity_waits_for_a_different_one_nearby(self):
+        config = MODULE.Config()
+        for kind in config.data["reminders"]:
+            config.data["reminders"][kind]["enabled"] = kind in ("eyes", "general")
+        db = MODULE.UsageDatabase(Path(TMP.name) / "fair_reminder_order.sqlite3")
+        shown = []
+        scheduler = MODULE.Scheduler(config, db, shown.append)
+        original_pause = MODULE.pause_media_players
+        MODULE.pause_media_players = lambda: []
+        try:
+            now = MODULE.time.time()
+            scheduler.state["last_completed_kind"] = "eyes"
+            scheduler.state["accrued"]["eyes"] = scheduler._target_seconds("eyes")
+            scheduler.state["accrued"]["general"] = scheduler._target_seconds("general") - 10 * 60
+            scheduler._maybe_show(now)
+            self.assertEqual(shown, [])
+            self.assertEqual(scheduler.next_due("eyes"), 10 * 60)
+
+            scheduler.state["accrued"]["general"] = scheduler._target_seconds("general")
+            scheduler._maybe_show(now + 10 * 60)
+            self.assertEqual(shown[0]["kind"], "general")
+            self.assertEqual(shown[0]["combined"], ["general", "eyes"])
+        finally:
+            MODULE.pause_media_players = original_pause
+            db.close()
+
+    def test_manual_quick_start_bypasses_activity_rotation_wait(self):
+        config = MODULE.Config()
+        db = MODULE.UsageDatabase(Path(TMP.name) / "manual_fair_reminder_order.sqlite3")
+        shown = []
+        scheduler = MODULE.Scheduler(config, db, shown.append)
+        original_pause = MODULE.pause_media_players
+        MODULE.pause_media_players = lambda: []
+        try:
+            scheduler.state["last_completed_kind"] = "eyes"
+            scheduler.state["accrued"]["general"] = scheduler._target_seconds("general") - 5 * 60
+            scheduler.trigger("eyes")
+            self.assertEqual(shown[0]["kind"], "eyes")
+        finally:
+            MODULE.pause_media_players = original_pause
+            db.close()
+
     def test_rotating_routines_have_variety(self):
         expected = {"eyes": 3, "general": 6, "neck": 6, "back": 5, "wrists": 5, "breathing": 5}
         for kind, count in expected.items():

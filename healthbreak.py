@@ -37,7 +37,7 @@ from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.3"
+APP_VERSION = "0.1.4"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -1470,6 +1470,7 @@ class Scheduler:
                 "quiet_until": 0.0,
                 "active_id": None,
                 "rotation": {kind: 0 for kind in REMINDER_META},
+                "last_completed_kind": None,
                 "drops_day": datetime.now().date().isoformat(),
                 "drops_done": 0,
                 "wellness_prompt_day": datetime.now().date().isoformat(),
@@ -1822,7 +1823,31 @@ class Scheduler:
             self.state["habit_reminders_sent"] = sorted(sent)
             self._save_state()
 
-    def _maybe_show(self, now: float) -> None:
+    def _repeat_hold_seconds(self, kind: str, now: float | None = None) -> float:
+        """Briefly hold a repeated activity when another one is almost due."""
+        if self.state.get("last_completed_kind") != kind:
+            return 0.0
+        current_time = time.time() if now is None else now
+        alternatives: list[float] = []
+        for other, options in self.config.data["reminders"].items():
+            if other == kind or not options.get("enabled"):
+                continue
+            if other == "drops" and int(self.state.get("drops_done", 0)) >= int(
+                options.get("times_per_day", 4)
+            ):
+                continue
+            remaining = max(
+                self._target_seconds(other) - float(self.state["accrued"].get(other, 0)),
+                float(self.state["snooze_until"].get(other, 0)) - current_time,
+                0.0,
+            )
+            if remaining == 0:
+                return 0.0
+            if remaining <= 10 * 60:
+                alternatives.append(remaining)
+        return min(alternatives, default=0.0)
+
+    def _maybe_show(self, now: float, preferred_kind: str | None = None) -> None:
         if now < float(self.state.get("quiet_until", 0)):
             return
         priority = ("general", "neck", "back", "eyes", "wrists", "breathing", "water", "drops")
@@ -1843,10 +1868,17 @@ class Scheduler:
         if not due:
             return
         # When reminders are close, the longer active break includes eye rest.
-        primary = due[0]
+        if preferred_kind in due:
+            primary = str(preferred_kind)
+        else:
+            last_completed = self.state.get("last_completed_kind")
+            different = [kind for kind in due if kind != last_completed]
+            primary = different[0] if different else due[0]
+            if len(due) == 1 and self._repeat_hold_seconds(primary, now) > 0:
+                return
         combined = [primary]
         if primary in ("general", "neck"):
-            for kind in due[1:]:
+            for kind in due:
                 if kind == "eyes":
                     combined.append(kind)
         reminder_id = f"{int(now * 1000)}-{primary}"
@@ -1925,6 +1957,7 @@ class Scheduler:
                     self.state["rotation"][completed] = int(self.state["rotation"].get(completed, 0)) + 1
                 if completed == "drops":
                     self.state["drops_done"] = int(self.state.get("drops_done", 0)) + 1
+            self.state["last_completed_kind"] = kind
         else:
             snooze_seconds = max(1, min(20, int(self.config.data.get("snooze_minutes", 5)))) * 60
             quiet_until = time.time() + snooze_seconds
@@ -1953,6 +1986,7 @@ class Scheduler:
             self._target_seconds(kind) - float(self.state["accrued"].get(kind, 0)),
             float(self.state.get("snooze_until", {}).get(kind, 0)) - now,
             float(self.state.get("quiet_until", 0)) - now,
+            self._repeat_hold_seconds(kind, now),
             0,
         )
 
@@ -1964,7 +1998,7 @@ class Scheduler:
         self.state["accrued"][kind] = self._target_seconds(kind)
         self.state["snooze_until"].pop(kind, None)
         if not self._active_kind:
-            self._maybe_show(time.time())
+            self._maybe_show(time.time(), preferred_kind=kind)
 
     def _save_state(self) -> None:
         atomic_json(STATE_FILE, self.state)
