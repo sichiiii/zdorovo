@@ -37,7 +37,7 @@ from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.2"
+APP_VERSION = "0.1.3"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -152,7 +152,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "rhythm",
         "breaks",
-        (1, 10, 50, 100),
+        (1, 10, 50, 100, 250, 500, 1000),
         "general",
         "sea",
         "Work rhythm",
@@ -163,7 +163,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "eyes",
         "eye_breaks",
-        (5, 25, 100),
+        (5, 25, 100, 250, 500),
         "eyes",
         "violet",
         "Eyes off screen",
@@ -174,7 +174,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "movement",
         "movement_breaks",
-        (5, 25, 100),
+        (5, 25, 100, 250, 500),
         "general",
         "green",
         "Keep moving",
@@ -185,7 +185,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "breathing",
         "breathing_sessions",
-        (1, 10, 30),
+        (1, 10, 30, 75, 150, 300),
         "breathing",
         "sky",
         "Calm rhythm",
@@ -196,7 +196,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "habits",
         "habit_marks",
-        (7, 30, 100),
+        (7, 30, 100, 250, 500, 1000),
         "water",
         "amber",
         "Healthy habits",
@@ -218,7 +218,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "streak",
         "break_streak",
-        (3, 7, 30),
+        (3, 7, 30, 60, 100, 365),
         "back",
         "deep",
         "Steady rhythm",
@@ -1930,7 +1930,7 @@ class Scheduler:
             quiet_until = time.time() + snooze_seconds
             self.state["quiet_until"] = quiet_until
             self.state["snooze_until"][kind] = quiet_until
-            self.resume_paused_media()
+        self.resume_paused_media()
         self._active_kind = None
         self.state["active_id"] = None
         self._save_state()
@@ -2169,6 +2169,13 @@ def status_banner(title: str) -> Gtk.Revealer:
     return revealer
 
 
+ACHIEVEMENT_LEVEL_MARKS = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
+
+
+def achievement_level_mark(level: int) -> str:
+    return ACHIEVEMENT_LEVEL_MARKS[level - 1] if 1 <= level <= len(ACHIEVEMENT_LEVEL_MARKS) else str(level)
+
+
 def achievement_emblem(icon: str, tone: str, level: int, unlocked: bool) -> Gtk.Widget:
     emblem = Gtk.Overlay(
         halign=Gtk.Align.CENTER,
@@ -2192,7 +2199,7 @@ def achievement_emblem(icon: str, tone: str, level: int, unlocked: bool) -> Gtk.
     )
     seal.set_size_request(23, 23)
     seal_icon = Gtk.Label(
-        label=("I", "II", "III", "IV")[max(1, min(4, int(level))) - 1],
+        label=achievement_level_mark(int(level)),
         css_classes=["achievement-level-mark"],
     )
     seal.set_center_widget(seal_icon)
@@ -4280,7 +4287,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.achievement_unlocked_value.set_text(f"{unlocked_total} / {len(achievements)}")
         self.achievement_series_value.set_text(f"{completed_series} / {len(grouped)}")
         self.achievement_streak_value.set_text(str(metrics["break_streak"]))
-        roman = ("I", "II", "III", "IV")
         for series in grouped.values():
             first = series[0]
             unlocked_in_series = sum(item["unlocked_at"] is not None for item in series)
@@ -4305,9 +4311,9 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             )
             series_card.append(header)
-            levels = Gtk.Grid(column_spacing=10, column_homogeneous=True)
+            levels = Gtk.Grid(column_spacing=10, row_spacing=10, column_homogeneous=True)
             next_locked_seen = False
-            for column, achievement in enumerate(series):
+            for index, achievement in enumerate(series):
                 unlocked_at = achievement["unlocked_at"]
                 is_unlocked = unlocked_at is not None
                 is_next = not is_unlocked and not next_locked_seen
@@ -4333,9 +4339,9 @@ class MainWindow(Adw.ApplicationWindow):
                 level.append(
                     Gtk.Label(
                         label=(
-                            f"Level {roman[int(achievement['level']) - 1]}"
+                            f"Level {achievement_level_mark(int(achievement['level']))}"
                             if self.language == "en"
-                            else f"Уровень {roman[int(achievement['level']) - 1]}"
+                            else f"Уровень {achievement_level_mark(int(achievement['level']))}"
                         ),
                         css_classes=["achievement-level-title"],
                     )
@@ -4365,7 +4371,7 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status = f"{progress} / {int(achievement['target'])}"
                 level.append(Gtk.Label(label=status, css_classes=["achievement-status"]))
-                levels.attach(level, column, 0, 1, 1)
+                levels.attach(level, index % 4, index // 4, 1, 1)
             series_card.append(levels)
             self.achievement_series_box.append(series_card)
 
@@ -6037,7 +6043,7 @@ class FallbackOverlay(Gtk.ApplicationWindow):
 
     def respond(self, action: str) -> None:
         guided_seconds = self._elapsed_now() if action == "done" and self.started else 0.0
-        if action == "snooze":
+        if action in ("done", "snooze"):
             self.get_application().scheduler.resume_paused_media()
         atomic_json(
             RESPONSE_FILE,
@@ -6306,7 +6312,7 @@ class ZdorovoApplication(Adw.Application):
         language = str(self.config.data.get("language", "en"))
         if len(unlocked) == 1:
             achievement = unlocked[0]
-            level = ("I", "II", "III", "IV")[int(achievement["level"]) - 1]
+            level = achievement_level_mark(int(achievement["level"]))
             title = "Achievement unlocked" if language == "en" else "Новое достижение"
             body = f"{achievement[f'title_{language}']} · {level}"
         else:

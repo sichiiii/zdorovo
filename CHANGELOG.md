@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 — 2026-07-13
+
+- media paused by Zdorovo resumes after both completing and postponing a reminder;
+- 38 achievement emblems with long-term goals up to level VII;
+- higher targets up to 1000 completed breaks or habit marks and a 365-day streak;
+- readable four-column achievement layout with preserved existing progress.
+
 ## 0.1.2 — 2026-07-13
 
 - light, dark and automatic themes with configurable switch times;

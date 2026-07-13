@@ -360,11 +360,16 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(restored.latest_wellness()["back"], 5)
 
     def test_multilevel_achievements_unlock_once_and_restore(self):
-        self.assertGreaterEqual(len(MODULE.ACHIEVEMENTS), 20)
+        self.assertGreaterEqual(len(MODULE.ACHIEVEMENTS), 35)
         self.assertGreaterEqual(
             max(item["level"] for item in MODULE.ACHIEVEMENTS if item["series"] == "rhythm"),
-            4,
+            7,
         )
+        self.assertEqual(
+            max(item["target"] for item in MODULE.ACHIEVEMENTS if item["series"] == "rhythm"),
+            1000,
+        )
+        self.assertEqual(MODULE.achievement_level_mark(7), "VII")
         source = MODULE.UsageDatabase(Path(TMP.name) / "achievements.sqlite3")
         for offset in range(10):
             source.log_reminder("eyes", "done", now=MODULE.time.time() + offset, duration_seconds=20)
@@ -436,22 +441,33 @@ class CoreTests(unittest.TestCase):
         self.assertIn("daily_app", payload["analytics"])
         self.assertIn("achievement_unlocks", payload["analytics"])
 
-    def test_snooze_resumes_only_players_paused_by_the_app(self):
-        config = MODULE.Config()
-        db = MODULE.UsageDatabase(Path(TMP.name) / "resume_media.sqlite3")
-        shown = []
-        resumed = []
-        scheduler = MODULE.Scheduler(config, db, shown.append)
+    def test_reminder_actions_resume_only_players_paused_by_the_app(self):
         original_pause = MODULE.pause_media_players
         original_resume = MODULE.resume_media_players
         MODULE.pause_media_players = lambda: ["org.mpris.MediaPlayer2.test"]
-        MODULE.resume_media_players = lambda players: resumed.extend(players) or len(players)
         try:
-            scheduler.trigger("eyes")
-            MODULE.atomic_json(MODULE.RESPONSE_FILE, {"id": shown[0]["id"], "action": "snooze"})
-            scheduler._consume_response()
-            scheduler.resume_paused_media()
-            self.assertEqual(resumed, ["org.mpris.MediaPlayer2.test"])
+            for action in ("done", "snooze"):
+                with self.subTest(action=action):
+                    config = MODULE.Config()
+                    db = MODULE.UsageDatabase(Path(TMP.name) / f"resume_media_{action}.sqlite3")
+                    shown = []
+                    resumed = []
+                    scheduler = MODULE.Scheduler(config, db, shown.append)
+
+                    def record_resume(players, target=resumed):
+                        target.extend(players)
+                        return len(players)
+
+                    MODULE.resume_media_players = record_resume
+                    scheduler.trigger("eyes")
+                    MODULE.atomic_json(
+                        MODULE.RESPONSE_FILE,
+                        {"id": shown[0]["id"], "action": action},
+                    )
+                    scheduler._consume_response()
+                    scheduler.resume_paused_media()
+                    self.assertEqual(resumed, ["org.mpris.MediaPlayer2.test"])
+                    db.close()
         finally:
             MODULE.pause_media_players = original_pause
             MODULE.resume_media_players = original_resume
