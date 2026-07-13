@@ -231,7 +231,7 @@ window {
   color: #327F79;
   background: rgba(255,255,255,0.62);
 }
-.language-picker button {
+.language-picker button, .theme-picker button, .theme-time-picker button {
   min-width: 142px;
   min-height: 36px;
   padding: 2px 11px;
@@ -242,18 +242,39 @@ window {
   border-radius: 9px;
   box-shadow: none;
 }
-.language-picker button:hover { color: #246B66; background: rgba(255,255,255,0.92); }
-.language-picker button label { color: #746d80; font-weight: 700; }
-.language-picker button:hover label { color: #625b70; }
-.language-picker popover contents {
+.language-picker button:hover, .theme-picker button:hover, .theme-time-picker button:hover {
+  color: #246B66;
+  background: rgba(255,255,255,0.92);
+}
+.language-picker button label, .theme-picker button label, .theme-time-picker button label {
+  color: #746d80;
+  font-weight: 700;
+}
+.language-picker button:hover label, .theme-picker button:hover label,
+.theme-time-picker button:hover label { color: #625b70; }
+.language-picker popover contents, .theme-picker popover contents,
+.theme-time-picker popover contents {
   padding: 5px;
   background: rgba(250,248,250,0.98);
   border: 1px solid rgba(50,127,121,0.12);
   border-radius: 10px;
   box-shadow: 0 14px 34px rgba(30,24,37,0.18);
 }
-.language-picker popover row { border-radius: 7px; padding: 7px 9px; }
-.language-picker popover row:selected { color: white; background: #327F79; }
+.language-picker popover row, .theme-picker popover row,
+.theme-time-picker popover row { border-radius: 7px; padding: 7px 9px; }
+.language-picker popover row:selected, .theme-picker popover row:selected,
+.theme-time-picker popover row:selected { color: white; background: #327F79; }
+.theme-settings-card { min-height: 0; }
+.theme-picker button { min-width: 150px; }
+.theme-schedule { margin-left: 50px; }
+.theme-time-control {
+  min-height: 38px;
+  padding: 4px 8px 4px 11px;
+  border-radius: 9px;
+  background: rgba(50,127,121,0.06);
+  border: 1px solid rgba(50,127,121,0.09);
+}
+.theme-time-picker button { min-width: 94px; min-height: 30px; }
 .snooze-settings-card { min-height: 48px; }
 .snooze-settings-card .frequency-control { min-width: 200px; }
 .wellness-reminder-settings-card { min-height: 48px; }
@@ -633,7 +654,23 @@ progressbar progress, progressbar > trough > progress {
   margin: 0;
 }
 
-scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-width: 5px; min-height: 5px; }
+scrollbar {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+scrollbar.vertical {
+  min-width: 7px;
+  padding: 0 1px;
+  margin: 5px 1px;
+}
+scrollbar.vertical trough { min-width: 5px; background: transparent; }
+scrollbar slider {
+  background: rgba(84,75,130,0.25);
+  border-radius: 99px;
+  min-width: 4px;
+  min-height: 5px;
+}
 
 .notification-button {
   min-width: 0;
@@ -1110,11 +1147,27 @@ scrollbar slider { background: rgba(84,75,130,0.25); border-radius: 99px; min-wi
 .dark-mode .symptom-score { color: #f5eff1; }
 .dark-mode .wellness-insight { color: #c9bec3; background: rgba(255,255,255,0.055); }
 .dark-mode .language-icon { color: #9ED8D2; background: rgba(255,255,255,0.07); }
-.dark-mode .language-picker button { color: #f2ecee; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
-.dark-mode .language-picker button:hover { background: rgba(255,255,255,0.12); }
-.dark-mode .language-picker button label { color: #b8aeb3; }
-.dark-mode .language-picker button:hover label { color: #d7cdd1; }
-.dark-mode .language-picker popover contents { background: #282429; border-color: rgba(255,255,255,0.11); }
+.dark-mode .language-picker button, .dark-mode .theme-picker button,
+.dark-mode .theme-time-picker button {
+  color: #f2ecee;
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+}
+.dark-mode .language-picker button:hover, .dark-mode .theme-picker button:hover,
+.dark-mode .theme-time-picker button:hover { background: rgba(255,255,255,0.12); }
+.dark-mode .language-picker button label, .dark-mode .theme-picker button label,
+.dark-mode .theme-time-picker button label { color: #b8aeb3; }
+.dark-mode .language-picker button:hover label, .dark-mode .theme-picker button:hover label,
+.dark-mode .theme-time-picker button:hover label { color: #d7cdd1; }
+.dark-mode .language-picker popover contents, .dark-mode .theme-picker popover contents,
+.dark-mode .theme-time-picker popover contents {
+  background: #282429;
+  border-color: rgba(255,255,255,0.11);
+}
+.dark-mode .theme-time-control {
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(255,255,255,0.08);
+}
 .dark-mode .data-button { color: #e8dfe2; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
 .dark-mode .data-button:hover { color: white; background: rgba(255,255,255,0.12); }
 .dark-mode .data-primary { color: white; background: #327F79; border-color: #327F79; }

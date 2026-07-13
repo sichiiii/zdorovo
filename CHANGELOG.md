@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-07-13
+
+- light, dark and automatic themes with configurable switch times;
+- compact vertical scrollbars that do not inherit oversized theme geometry;
+- equal-height wellbeing and quick-start cards on the Overview page;
+- persistent theme schedule included in export and import.
+
 ## 0.1.1 — 2026-07-13
 
 - public English project page with reproducible application screenshots;

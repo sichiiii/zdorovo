@@ -6,6 +6,7 @@ from typing import Any
 
 UI_EN = {
     "Тёмная тема": "Dark theme",
+    "Автотема": "Automatic theme",
     "ВАШ РИТМ": "YOUR RHYTHM",
     "Сегодня": "Today",
     "Обзор": "Overview",
@@ -109,6 +110,10 @@ UI_EN = {
     "Сбор уже работает в фоне": "Collection is already running in the background",
     "Ваш режим — ваши правила": "Your routine, your rules",
     "Базовый профиль уже настроен. Меняйте только то, что действительно помогает.": "The base routine is ready. Change only what genuinely helps.",
+    "Оформление": "Appearance",
+    "Выберите тему вручную или переключайте её по расписанию": "Choose a theme manually or switch it on a schedule",
+    "Светлая тема с": "Light theme from",
+    "Тёмная тема с": "Dark theme from",
     "Основной режим": "Main routine",
     "Рекомендованный профиль — всё уже включено": "Recommended profile — everything is already enabled",
     "Дополнительно": "Optional",

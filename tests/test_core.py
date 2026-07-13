@@ -73,6 +73,19 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(MODULE.breathing_phase(preset, 2), ("inhale", 0.5))
         self.assertEqual(MODULE.breathing_phase(preset, 7), ("exhale", 0.5))
 
+    def test_automatic_theme_schedule_crosses_midnight(self):
+        def moment(hour, minute=0):
+            return MODULE.datetime(2026, 7, 13, hour, minute)
+
+        self.assertTrue(MODULE.automatic_theme_is_dark(moment(6, 59), "07:00", "21:00"))
+        self.assertFalse(MODULE.automatic_theme_is_dark(moment(7), "07:00", "21:00"))
+        self.assertFalse(MODULE.automatic_theme_is_dark(moment(20, 59), "07:00", "21:00"))
+        self.assertTrue(MODULE.automatic_theme_is_dark(moment(21), "07:00", "21:00"))
+        self.assertFalse(MODULE.automatic_theme_is_dark(moment(23), "20:00", "06:00"))
+        self.assertTrue(MODULE.automatic_theme_is_dark(moment(12), "20:00", "06:00"))
+        self.assertEqual(MODULE.normalize_clock("7:5", "00:00"), "07:05")
+        self.assertEqual(MODULE.normalize_clock("25:00", "07:00"), "07:00")
+
     def test_application_accent_is_compatible_with_gtk_414(self):
         css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
         self.assertIn("@define-color accent #327F79", css)

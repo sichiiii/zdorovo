@@ -37,7 +37,7 @@ from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.1"
+APP_VERSION = "0.1.2"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -56,6 +56,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "language": "en",
     "language_selected": False,
     "dark_mode": False,
+    "theme_mode": "light",
+    "theme_light_time": "07:00",
+    "theme_dark_time": "21:00",
     "manual_pause": False,
     "analytics_hidden_apps": [],
     "guided_sound_enabled": True,
@@ -723,15 +726,52 @@ def guided_step_seconds(total_seconds: int, step_count: int, preferred: Any = No
     return [base + (1 if index < remainder else 0) for index in range(step_count)]
 
 
+def normalize_clock(value: Any, fallback: str) -> str:
+    """Return a safe HH:MM value for persisted schedule settings."""
+    try:
+        hour, minute = (int(part) for part in str(value).split(":", 1))
+    except (TypeError, ValueError):
+        return fallback
+    if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+        return fallback
+    return f"{hour:02d}:{minute:02d}"
+
+
+def automatic_theme_is_dark(
+    current: datetime | None = None,
+    light_time: str = "07:00",
+    dark_time: str = "21:00",
+) -> bool:
+    """Resolve the scheduled theme, including schedules that cross midnight."""
+    now = current or datetime.now()
+    light_hour, light_minute = (int(part) for part in normalize_clock(light_time, "07:00").split(":"))
+    dark_hour, dark_minute = (int(part) for part in normalize_clock(dark_time, "21:00").split(":"))
+    current_minutes = now.hour * 60 + now.minute
+    light_minutes = light_hour * 60 + light_minute
+    dark_minutes = dark_hour * 60 + dark_minute
+    if light_minutes == dark_minutes:
+        return False
+    if light_minutes < dark_minutes:
+        return not light_minutes <= current_minutes < dark_minutes
+    return dark_minutes <= current_minutes < light_minutes
+
+
 class Config:
     def __init__(self) -> None:
         CONFIG_HOME.mkdir(parents=True, exist_ok=True)
-        self.data = deep_merge(DEFAULT_CONFIG, load_json(CONFIG_FILE, {}))
+        saved_data = load_json(CONFIG_FILE, {})
+        self.data = deep_merge(DEFAULT_CONFIG, saved_data)
         if not bool(self.data.get("language_selected", False)) or self.data.get("language") not in (
             "en",
             "ru",
         ):
             self.data["language"] = "en"
+        theme_mode = saved_data.get("theme_mode")
+        if theme_mode not in ("light", "dark", "auto"):
+            theme_mode = "dark" if bool(self.data.get("dark_mode", False)) else "light"
+        self.data["theme_mode"] = theme_mode
+        self.data["theme_light_time"] = normalize_clock(self.data.get("theme_light_time"), "07:00")
+        self.data["theme_dark_time"] = normalize_clock(self.data.get("theme_dark_time"), "21:00")
         self.data["snooze_minutes"] = max(1, min(20, int(self.data.get("snooze_minutes", 5))))
         habits = self.data.get("habits")
         if not isinstance(habits, list):
@@ -3025,6 +3065,7 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar.add_css_class("glass-toolbar")
         header = Adw.HeaderBar()
         header.add_css_class("topbar")
+        self._syncing_theme_control = False
         self.theme_switch = Gtk.Switch(valign=Gtk.Align.CENTER, active=app.config.data["dark_mode"])
         self.theme_switch.connect("notify::active", self._theme_changed)
         theme_box = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
@@ -3032,7 +3073,8 @@ class MainWindow(Adw.ApplicationWindow):
             "weather-clear-night-symbolic" if app.config.data["dark_mode"] else "weather-clear-symbolic"
         )
         theme_box.append(self.theme_icon)
-        theme_box.append(Gtk.Label(label=self._t("Тёмная тема")))
+        self.theme_label = Gtk.Label()
+        theme_box.append(self.theme_label)
         theme_box.append(self.theme_switch)
         header.pack_end(theme_box)
         self.notification_button = Gtk.MenuButton(
@@ -3150,6 +3192,7 @@ class MainWindow(Adw.ApplicationWindow):
         # Swap a completely built tree in one operation. Attaching an empty stack
         # first lets GTK resize the window while longer translated labels arrive.
         self.set_content(toolbar)
+        self.apply_theme_state(bool(app.config.data["dark_mode"]))
         self.refresh()
 
     def reload_language(self, page: str = "settings") -> bool:
@@ -3191,6 +3234,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _page(self) -> tuple[Gtk.ScrolledWindow, Gtk.Box]:
         scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, css_classes=["glass-page"])
+        scroller.set_overlay_scrolling(True)
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, css_classes=["page-content"])
         content.set_vexpand(True)
@@ -3382,7 +3426,7 @@ class MainWindow(Adw.ApplicationWindow):
         wellness = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "wellness-card"]
         )
-        wellness.set_valign(Gtk.Align.START)
+        wellness.set_valign(Gtk.Align.FILL)
         wellness.set_hexpand(True)
         wellness.append(Gtk.Label(label="Самочувствие сейчас", xalign=0, css_classes=["section-title"]))
         wellness.append(
@@ -3436,11 +3480,12 @@ class MainWindow(Adw.ApplicationWindow):
         wellness_save = Gtk.Button(label="Сохранить самочувствие", css_classes=["health-primary"])
         wellness_save.connect("clicked", self._save_wellness)
         wellness_actions.append(wellness_save)
+        wellness.append(Gtk.Box(vexpand=True))
         wellness.append(wellness_actions)
         health_grid.attach(wellness, 0, 0, 2, 1)
 
         quick = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "quick-card"])
-        quick.set_valign(Gtk.Align.START)
+        quick.set_valign(Gtk.Align.FILL)
         quick.set_size_request(250, -1)
         quick.append(Gtk.Label(label="Быстрый старт", xalign=0, css_classes=["section-title"]))
         quick.append(
@@ -4744,6 +4789,7 @@ class MainWindow(Adw.ApplicationWindow):
         settings_hero.append(settings_hero_copy)
         content.append(settings_hero)
         content.append(language_card)
+        content.append(self._theme_settings_card())
         content.append(self._snooze_settings_card())
         content.append(self._wellness_reminder_settings_card())
 
@@ -4944,6 +4990,86 @@ class MainWindow(Adw.ApplicationWindow):
         content.append(privacy)
         return scroller
 
+    def _theme_settings_card(self) -> Gtk.Widget:
+        card = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=12,
+            css_classes=["settings-card", "theme-settings-card"],
+        )
+        head = Gtk.Box(spacing=12)
+        head.append(symbolic_icon("applications-graphics-symbolic"))
+        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
+        copy.append(Gtk.Label(label="Оформление", xalign=0, css_classes=["settings-title"]))
+        copy.append(
+            Gtk.Label(
+                label="Выберите тему вручную или переключайте её по расписанию",
+                xalign=0,
+                wrap=True,
+                css_classes=["muted", "caption"],
+            )
+        )
+        head.append(copy)
+        mode_names = (
+            ["Light", "Dark", "Automatic"]
+            if self.language == "en"
+            else ["Светлая", "Тёмная", "Автоматически"]
+        )
+        modes = ("light", "dark", "auto")
+        current_mode = str(self.app.config.data.get("theme_mode", "light"))
+        mode_picker = Gtk.DropDown.new_from_strings(mode_names)
+        self.theme_mode_picker = mode_picker
+        mode_picker.add_css_class("theme-picker")
+        mode_picker.set_selected(modes.index(current_mode) if current_mode in modes else 0)
+        mode_picker.set_valign(Gtk.Align.CENTER)
+        head.append(mode_picker)
+        card.append(head)
+
+        schedule = Gtk.Box(spacing=10, homogeneous=True, css_classes=["theme-schedule"])
+
+        def make_time_picker(key: str, title: str) -> Gtk.Widget:
+            saved = normalize_clock(
+                self.app.config.data.get(key), "07:00" if key.endswith("light_time") else "21:00"
+            )
+            values = [f"{minute // 60:02d}:{minute % 60:02d}" for minute in range(0, 24 * 60, 15)]
+            if saved not in values:
+                values.append(saved)
+                values.sort(key=lambda value: tuple(int(part) for part in value.split(":")))
+            box = Gtk.Box(spacing=9, css_classes=["theme-time-control"])
+            box.append(Gtk.Label(label=title, xalign=0, hexpand=True, css_classes=["caption"]))
+            picker = Gtk.DropDown.new_from_strings(values)
+            picker.add_css_class("theme-time-picker")
+            picker.set_selected(values.index(saved))
+
+            def changed(widget: Gtk.DropDown, _pspec: Any) -> None:
+                self.app.config.data[key] = values[widget.get_selected()]
+                self.app.config.save()
+                if self.app.config.data.get("theme_mode") == "auto":
+                    self.app.apply_color_scheme()
+
+            picker.connect("notify::selected", changed)
+            box.append(picker)
+            return box
+
+        schedule.append(make_time_picker("theme_light_time", "Светлая тема с"))
+        schedule.append(make_time_picker("theme_dark_time", "Тёмная тема с"))
+        schedule.set_sensitive(current_mode == "auto")
+        self.theme_schedule = schedule
+        card.append(schedule)
+
+        def mode_changed(widget: Gtk.DropDown, _pspec: Any) -> None:
+            if self._syncing_theme_control:
+                return
+            mode = modes[widget.get_selected()]
+            self.app.config.data["theme_mode"] = mode
+            if mode != "auto":
+                self.app.config.data["dark_mode"] = mode == "dark"
+            self.app.config.save()
+            schedule.set_sensitive(mode == "auto")
+            self.app.apply_color_scheme()
+
+        mode_picker.connect("notify::selected", mode_changed)
+        return card
+
     def _language_changed(self, picker: Gtk.DropDown, _pspec: Any) -> None:
         language = "en" if picker.get_selected() == 0 else "ru"
         if language == self.language:
@@ -5094,6 +5220,14 @@ class MainWindow(Adw.ApplicationWindow):
             restored_config["snooze_minutes"] = max(1, min(20, int(restored_config.get("snooze_minutes", 5))))
             if restored_config.get("language") not in ("en", "ru"):
                 restored_config["language"] = "en"
+            if settings.get("theme_mode") not in ("light", "dark", "auto"):
+                restored_config["theme_mode"] = "dark" if bool(settings.get("dark_mode", False)) else "light"
+            restored_config["theme_light_time"] = normalize_clock(
+                restored_config.get("theme_light_time"), "07:00"
+            )
+            restored_config["theme_dark_time"] = normalize_clock(
+                restored_config.get("theme_dark_time"), "21:00"
+            )
             self.app.db.restore_tables(analytics)
             self.app.config.data = restored_config
             self.app.config.save()
@@ -5632,18 +5766,37 @@ class MainWindow(Adw.ApplicationWindow):
         self.app.config.save()
         self.refresh()
 
-    def _theme_changed(self, switch: Gtk.Switch, _pspec: Any) -> None:
-        dark = switch.get_active()
-        self.app.config.data["dark_mode"] = dark
-        self.app.config.save()
-        self.app.apply_color_scheme()
+    def apply_theme_state(self, dark: bool) -> None:
+        mode = str(self.app.config.data.get("theme_mode", "light"))
+        self._syncing_theme_control = True
+        self.theme_switch.set_active(dark)
+        self.theme_switch.set_sensitive(mode != "auto")
+        if hasattr(self, "theme_mode_picker"):
+            self.theme_mode_picker.set_selected(("light", "dark", "auto").index(mode))
+            self.theme_schedule.set_sensitive(mode == "auto")
+        self._syncing_theme_control = False
+        if mode == "auto":
+            label = "Automatic theme" if self.language == "en" else "Автотема"
+        else:
+            label = "Dark theme" if self.language == "en" else "Тёмная тема"
+        self.theme_label.set_text(label)
+        self.theme_icon.set_from_icon_name(
+            "weather-clear-night-symbolic" if dark else "weather-clear-symbolic"
+        )
         if dark:
             self.add_css_class("dark-mode")
-            self.theme_icon.set_from_icon_name("weather-clear-night-symbolic")
         else:
             self.remove_css_class("dark-mode")
-            self.theme_icon.set_from_icon_name("weather-clear-symbolic")
         self.backdrop.set_dark(dark)
+
+    def _theme_changed(self, switch: Gtk.Switch, _pspec: Any) -> None:
+        if self._syncing_theme_control:
+            return
+        dark = switch.get_active()
+        self.app.config.data["dark_mode"] = dark
+        self.app.config.data["theme_mode"] = "dark" if dark else "light"
+        self.app.config.save()
+        self.app.apply_color_scheme()
         self.refresh()
 
     def _enabled_changed(self, switch: Gtk.Switch, _pspec: Any, kind: str) -> None:
@@ -5964,6 +6117,7 @@ class ZdorovoApplication(Adw.Application):
         quit_action.connect("activate", self._quit_action)
         self.add_action(quit_action)
         GLib.timeout_add_seconds(2, self.scheduler.tick)
+        GLib.timeout_add_seconds(30, self._theme_schedule_tick)
 
     def do_activate(self) -> None:
         if self.trigger_kind in REMINDER_META:
@@ -5989,9 +6143,33 @@ class ZdorovoApplication(Adw.Application):
             # deterministic without changing the user's system-wide theme.
             Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
 
+    def effective_dark_mode(self) -> bool:
+        mode = str(self.config.data.get("theme_mode", "light"))
+        if mode == "auto":
+            return automatic_theme_is_dark(
+                light_time=str(self.config.data.get("theme_light_time", "07:00")),
+                dark_time=str(self.config.data.get("theme_dark_time", "21:00")),
+            )
+        return mode == "dark"
+
     def apply_color_scheme(self) -> None:
-        scheme = Adw.ColorScheme.FORCE_DARK if self.config.data["dark_mode"] else Adw.ColorScheme.FORCE_LIGHT
+        dark = self.effective_dark_mode()
+        if bool(self.config.data.get("dark_mode", False)) != dark:
+            self.config.data["dark_mode"] = dark
+            self.config.save()
+        scheme = Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT
         Adw.StyleManager.get_default().set_color_scheme(scheme)
+        if self.window:
+            self.window.apply_theme_state(dark)
+
+    def _theme_schedule_tick(self) -> bool:
+        if self.config.data.get("theme_mode") == "auto" and (
+            self.effective_dark_mode() != bool(self.config.data.get("dark_mode", False))
+        ):
+            self.apply_color_scheme()
+            if self.window:
+                self.window.refresh()
+        return GLib.SOURCE_CONTINUE
 
     def rebuild_window(self, page: str = "today") -> bool:
         old_window = self.window
@@ -6172,10 +6350,9 @@ class ZdorovoApplication(Adw.Application):
     def _theme_action(self, _action: Gio.SimpleAction, parameter: GLib.Variant) -> None:
         dark = parameter.get_boolean()
         self.config.data["dark_mode"] = dark
+        self.config.data["theme_mode"] = "dark" if dark else "light"
         self.config.save()
         self.apply_color_scheme()
-        if self.window:
-            self.window.theme_switch.set_active(dark)
 
     def _pause_action(self, _action: Gio.SimpleAction, parameter: GLib.Variant) -> None:
         self.config.data["manual_pause"] = parameter.get_boolean()

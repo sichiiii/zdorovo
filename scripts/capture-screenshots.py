@@ -46,6 +46,7 @@ def seed_demo(app: healthbreak.ZdorovoApplication, language: str = "en") -> None
             "language": language,
             "language_selected": True,
             "dark_mode": False,
+            "theme_mode": "light",
             "notification_center_initialized": True,
             "wellness_reminders_enabled": True,
         }
@@ -205,6 +206,7 @@ def main() -> int:
         _name, page, dark = captures[state["index"]]
         window.set_visible(False)
         app.config.data["dark_mode"] = dark
+        app.config.data["theme_mode"] = "dark" if dark else "light"
         app.apply_color_scheme()
         window.add_css_class("dark-mode") if dark else window.remove_css_class("dark-mode")
         window.backdrop.set_dark(dark)
