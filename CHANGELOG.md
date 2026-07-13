@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.5 — 2026-07-13
+
+- every day inside a selected calendar interval now has a solid visible fill;
+- range endpoints retain rounded corners while intermediate days form a continuous band;
+- selected intervals have the same clear contrast in light and dark themes;
+- narrow windows reflow wide page sections instead of clipping their right edge;
+- vertical and horizontal scrollbars use a slim, theme-independent track;
+- breathing instructions, presets and metrics no longer reserve unused height;
+- all seven achievement series now contain eight levels, for 56 emblems with no empty grid cells;
+- achievement grids now switch directly between balanced four- and two-column layouts;
+- Eye rest duration can now be adjusted from 20 to 120 seconds;
+- achievement notifications now use a complete readable sentence instead of a compact separator;
+- new achievement thresholds fill useful milestones without raising the existing upper goals.
+
 ## 0.1.4 — 2026-07-13
 
 - fair rotation prevents the same completed activity from being selected twice in a row;

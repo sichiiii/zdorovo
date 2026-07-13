@@ -1,3 +1,14 @@
+zdorovo (0.1.5) unstable; urgency=medium
+
+  * Give every day inside a selected calendar range a solid visible fill.
+  * Keep rounded corners only on the range endpoints.
+  * Improve selected-range contrast in both themes.
+  * Reflow wide page sections on narrow windows and slim every scrollbar.
+  * Remove unused height from breathing cards and instructions.
+  * Fill all achievement grids with 56 attainable multi-level emblems.
+
+ -- CYBERJABKA <sichiiii@users.noreply.github.com>  Mon, 13 Jul 2026 13:20:00 +0300
+
 zdorovo (0.1.4) unstable; urgency=medium
 
   * Alternate due activity types instead of repeating the same exercise.

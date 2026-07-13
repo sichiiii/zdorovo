@@ -114,7 +114,7 @@ def seed_demo(app: healthbreak.ZdorovoApplication, language: str = "en") -> None
     db.add_notification(
         "achievement",
         "New achievement",
-        "Work rhythm · Level II is now unlocked.",
+        "You reached Level II in Work rhythm.",
         "achievements",
         notification_id="demo-achievement",
     )
@@ -181,6 +181,16 @@ def main() -> int:
 
     captures = tuple(capture for capture in CAPTURES if capture[0] == args.page)
     OUTPUT.mkdir(parents=True, exist_ok=True)
+
+    base_window = healthbreak.MainWindow
+
+    class CaptureWindow(base_window):
+        def __init__(self, app: healthbreak.ZdorovoApplication) -> None:
+            super().__init__(app)
+            self.set_size_request(args.width, args.height)
+            self.set_default_size(args.width, args.height)
+
+    healthbreak.MainWindow = CaptureWindow
     app = healthbreak.ZdorovoApplication()
     seed_demo(app, args.language)
     state = {"index": 0}

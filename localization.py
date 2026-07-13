@@ -211,8 +211,8 @@ META_EN: dict[str, dict[str, Any]] = {
                 ],
             },
             {
-                "title": "One minute off screen",
-                "eyebrow": "60 seconds of quiet rest",
+                "title": "Quiet rest away from the screen",
+                "eyebrow": "Eye rest without near focus",
                 "duration_seconds": 60,
                 "step_seconds": [20, 20, 20],
                 "steps": [

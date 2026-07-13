@@ -343,7 +343,7 @@ window {
 }
 .privacy-icon { color: #327F79; background: rgba(255,255,255,0.82); border: 1px solid white; border-radius: 999px; min-width: 40px; min-height: 40px; }
 
-.metric-card { min-height: 98px; }
+.metric-card { min-height: 0; }
 .metric-label { color: #69657e; font-weight: 650; }
 .metric-value { font-size: 25px; font-weight: 840; color: #29263f; }
 .accent-text { color: #327F79; font-weight: 760; }
@@ -529,13 +529,15 @@ window {
   font-weight: 700;
 }
 .range-day:hover { color: #246B66; background: rgba(50,127,121,0.13); }
-.range-day.range-inside { color: #246B66; background: rgba(50,127,121,0.13); }
+.range-day.range-inside { color: white; background: #327F79; }
 .range-day.range-preview { background: rgba(50,127,121,0.19); }
-.range-day.range-start, .range-day.range-end {
+.range-day.range-start {
   color: white;
   background: #327F79;
-  border-radius: 8px;
+  border-radius: 8px 0 0 8px;
 }
+.range-day.range-end { color: white; background: #327F79; border-radius: 0 8px 8px 0; }
+.range-day.range-start.range-end { border-radius: 8px; }
 .range-day:disabled { opacity: 0.24; }
 .range-calendar-hint { min-height: 20px; padding: 2px 3px 0; color: #776b72; font-size: 9px; }
 .day-chart-scroll, .day-chart-scroll viewport { background: transparent; border: 0; }
@@ -660,17 +662,48 @@ scrollbar {
   box-shadow: none;
 }
 scrollbar.vertical {
-  min-width: 7px;
-  padding: 0 1px;
-  margin: 5px 1px;
+  min-width: 3px;
+  padding: 0;
+  margin: 5px 0;
 }
-scrollbar.vertical trough { min-width: 5px; background: transparent; }
+scrollbar.vertical trough { min-width: 3px; padding: 0; background: transparent; }
 scrollbar slider {
   background: rgba(84,75,130,0.25);
   border-radius: 99px;
-  min-width: 4px;
+  min-width: 3px;
   min-height: 5px;
+  margin: 0;
 }
+scrollbar.vertical slider {
+  min-width: 3px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+scrollbar.horizontal {
+  min-height: 3px;
+  padding: 0;
+  margin: 0;
+}
+scrollbar.horizontal trough { min-height: 3px; padding: 0; background: transparent; }
+scrollbar.horizontal slider {
+  min-height: 3px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.responsive-flow { background: transparent; }
+.responsive-flow flowboxchild {
+  min-width: 300px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.achievement-levels flowboxchild { min-width: 150px; }
 
 .notification-button {
   min-width: 0;
@@ -788,8 +821,8 @@ scrollbar slider {
 .breathing-rhythm-label { color: rgba(255,255,255,0.54); font-size: 8px; font-weight: 850; letter-spacing: 1px; }
 .breathing-rhythm-value { color: white; font-size: 15px; font-weight: 830; }
 .breathing-instruction {
-  min-height: 38px;
-  padding: 8px 10px;
+  min-height: 0;
+  padding: 5px 9px;
   color: rgba(255,255,255,0.76);
   background: rgba(0,0,0,0.13);
   border-left: 2px solid #5DB2AA;
@@ -799,8 +832,8 @@ scrollbar slider {
 .breathing-preset-card { padding: 13px 15px; }
 .breathing-presets { margin-top: 1px; }
 .breathing-preset {
-  min-height: 142px;
-  padding: 11px 10px;
+  min-height: 0;
+  padding: 9px 10px;
   color: #504a5e;
   background: rgba(255,255,255,0.50);
   border: 1px solid rgba(83,68,77,0.10);
@@ -813,7 +846,7 @@ scrollbar slider {
 .breathing-preset .muted { color: #827884; }
 .breathing-preset-title { font-size: 14px; font-weight: 800; }
 .breathing-preset-description {
-  min-height: 38px;
+  min-height: 0;
   color: #7b7180;
   font-size: 12px;
   line-height: 1.3;
@@ -839,7 +872,8 @@ scrollbar slider {
   border-color: rgba(255,255,255,0.12);
 }
 .breathing-guide-card .data-button:hover { color: white; background: rgba(255,255,255,0.13); }
-.breathing-schedule-card { min-height: 104px; padding: 13px 15px; }
+.breathing-schedule-card { min-height: 0; padding: 13px 15px; }
+.breathing-metrics .metric-card { min-height: 0; }
 .breathing-interval-row {
   padding-top: 8px;
   border-top: 1px solid rgba(75,62,70,0.09);
@@ -1117,7 +1151,7 @@ scrollbar slider {
 .dark-mode .range-weekday { color: #9f9298; }
 .dark-mode .range-day { color: #ddd3d7; }
 .dark-mode .range-day:hover { color: white; background: rgba(50,127,121,0.28); }
-.dark-mode .range-day.range-inside { color: #C9EEEA; background: rgba(50,127,121,0.24); }
+.dark-mode .range-day.range-inside { color: white; background: #327F79; }
 .dark-mode .range-day.range-preview { background: rgba(50,127,121,0.34); }
 .dark-mode .range-day.range-start, .dark-mode .range-day.range-end { color: white; background: #327F79; }
 .dark-mode .range-calendar-hint { color: #b9adb2; }

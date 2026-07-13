@@ -37,7 +37,7 @@ from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.4"
+APP_VERSION = "0.1.5"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -111,6 +111,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
 }
 
 CUSTOM_DURATION_LIMITS: dict[str, tuple[int, int, int]] = {
+    "eyes": (20, 120, 10),
     "general": (120, 600, 30),
     "neck": (60, 300, 30),
     "back": (60, 300, 30),
@@ -152,7 +153,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "rhythm",
         "breaks",
-        (1, 10, 50, 100, 250, 500, 1000),
+        (1, 10, 25, 50, 100, 250, 500, 1000),
         "general",
         "sea",
         "Work rhythm",
@@ -163,7 +164,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "eyes",
         "eye_breaks",
-        (5, 25, 100, 250, 500),
+        (1, 5, 15, 25, 50, 100, 250, 500),
         "eyes",
         "violet",
         "Eyes off screen",
@@ -174,7 +175,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "movement",
         "movement_breaks",
-        (5, 25, 100, 250, 500),
+        (1, 5, 15, 25, 50, 100, 250, 500),
         "general",
         "green",
         "Keep moving",
@@ -185,7 +186,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "breathing",
         "breathing_sessions",
-        (1, 10, 30, 75, 150, 300),
+        (1, 3, 10, 30, 50, 75, 150, 300),
         "breathing",
         "sky",
         "Calm rhythm",
@@ -196,7 +197,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "habits",
         "habit_marks",
-        (7, 30, 100, 250, 500, 1000),
+        (1, 7, 30, 60, 100, 250, 500, 1000),
         "water",
         "amber",
         "Healthy habits",
@@ -207,7 +208,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "variety",
         "break_kinds",
-        (3, 6, 8),
+        (1, 2, 3, 4, 5, 6, 7, 8),
         "neck",
         "rose",
         "Balanced routine",
@@ -218,7 +219,7 @@ ACHIEVEMENTS: tuple[dict[str, Any], ...] = (
     *_achievement_series(
         "streak",
         "break_streak",
-        (3, 7, 30, 60, 100, 365),
+        (3, 7, 14, 30, 60, 100, 180, 365),
         "back",
         "deep",
         "Steady rhythm",
@@ -265,12 +266,12 @@ REMINDER_META = {
                 "step_seconds": [10, 5, 10, 5, 15],
             },
             {
-                "title": "Минута без экрана",
-                "eyebrow": "60 секунд спокойного отдыха",
+                "title": "Спокойный отдых без экрана",
+                "eyebrow": "Отдых для глаз без ближнего фокуса",
                 "duration_seconds": 60,
                 "steps": [
-                    "Закройте глаза на 20 секунд, не зажмуриваясь и не надавливая руками.",
-                    "Откройте глаза и спокойно смотрите вдаль 20 секунд.",
+                    "Мягко закройте глаза, не зажмуриваясь и не надавливая руками.",
+                    "Откройте глаза и спокойно смотрите вдаль.",
                     "Медленно полностью моргните 8 раз и ещё немного не возвращайтесь к экрану.",
                 ],
                 "step_seconds": [20, 20, 20],
@@ -1895,7 +1896,7 @@ class Scheduler:
             eye_meta = self._reminder_content("eyes")
             eye_prefix = "For the eyes" if self.config.data.get("language") == "en" else "Для глаз"
             eye_steps = [f"{eye_prefix}: {step}" for step in eye_meta["steps"]]
-            eye_duration = int(eye_meta.get("duration_seconds", 20))
+            eye_duration = int(self.config.reminder("eyes")["duration_seconds"])
             steps.extend(eye_steps)
             step_seconds.extend(
                 guided_step_seconds(eye_duration, len(eye_steps), eye_meta.get("step_seconds"))
@@ -2208,6 +2209,26 @@ ACHIEVEMENT_LEVEL_MARKS = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX
 
 def achievement_level_mark(level: int) -> str:
     return ACHIEVEMENT_LEVEL_MARKS[level - 1] if 1 <= level <= len(ACHIEVEMENT_LEVEL_MARKS) else str(level)
+
+
+def achievement_unlock_body(achievement: dict[str, Any], language: str) -> str:
+    level = achievement_level_mark(int(achievement["level"]))
+    title = str(achievement[f"title_{language}"])
+    if language == "en":
+        return f"You reached Level {level} in {title}."
+    return f"Открыт уровень {level} в серии «{title}»."
+
+
+def notification_body_for_display(kind: str, body: str, language: str) -> str:
+    """Make compact achievement messages from older databases readable."""
+    if kind != "achievement" or " · " not in body:
+        return body
+    title, level = (part.strip() for part in body.rsplit(" · ", 1))
+    if not title or not level:
+        return body
+    if language == "en":
+        return f"You reached Level {level} in {title}."
+    return f"Открыт уровень {level} в серии «{title}»."
 
 
 def achievement_emblem(icon: str, tone: str, level: int, unlocked: bool) -> Gtk.Widget:
@@ -3273,9 +3294,19 @@ class MainWindow(Adw.ApplicationWindow):
             self._translate_tree(child)
             child = child.get_next_sibling()
 
-    def _page(self) -> tuple[Gtk.ScrolledWindow, Gtk.Box]:
-        scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, css_classes=["glass-page"])
+    def _page(self) -> tuple[Adw.BreakpointBin, Gtk.Box]:
+        scroller = Gtk.ScrolledWindow(
+            hscrollbar_policy=Gtk.PolicyType.AUTOMATIC,
+            css_classes=["glass-page"],
+        )
         scroller.set_overlay_scrolling(True)
+        responsive_page = Adw.BreakpointBin()
+        responsive_page.set_size_request(480, 360)
+        responsive_page.set_child(scroller)
+        breakpoint = Adw.Breakpoint()
+        breakpoint.set_condition(Adw.BreakpointCondition.parse("max-width: 650sp"))
+        responsive_page.add_breakpoint(breakpoint)
+        self._building_page_breakpoint = breakpoint
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, css_classes=["page-content"])
         content.set_vexpand(True)
@@ -3283,10 +3314,32 @@ class MainWindow(Adw.ApplicationWindow):
         content.set_margin_bottom(18)
         content.set_margin_start(24)
         content.set_margin_end(24)
+        breakpoint.add_setter(content, "margin-start", 16)
+        breakpoint.add_setter(content, "margin-end", 16)
         page.append(content)
         page.append(cyberjabka_footer())
         scroller.set_child(page)
-        return scroller, content
+        return responsive_page, content
+
+    def _stack_when_compact(self, box: Gtk.Box) -> Gtk.Box:
+        """Stack a wide group when its page no longer has enough room."""
+        self._building_page_breakpoint.add_setter(
+            box,
+            "orientation",
+            Gtk.Orientation.VERTICAL,
+        )
+        return box
+
+    @staticmethod
+    def _responsive_flow(css_class: str, columns: int = 2, spacing: int = 10) -> Gtk.FlowBox:
+        flow = Gtk.FlowBox(css_classes=[css_class, "responsive-flow"])
+        flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        flow.set_min_children_per_line(1)
+        flow.set_max_children_per_line(columns)
+        flow.set_column_spacing(spacing)
+        flow.set_row_spacing(spacing)
+        flow.set_homogeneous(True)
+        return flow
 
     def _refresh_notification_center(self) -> None:
         if not hasattr(self, "notification_list"):
@@ -3340,7 +3393,7 @@ class MainWindow(Adw.ApplicationWindow):
             )
             copy.append(
                 Gtk.Label(
-                    label=str(row["body"]),
+                    label=notification_body_for_display(str(row["kind"]), str(row["body"]), self.language),
                     xalign=0,
                     wrap=True,
                     max_width_chars=38,
@@ -3393,7 +3446,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _build_dashboard(self) -> Gtk.Widget:
         scroller, content = self._page()
-        hero = Gtk.Box(spacing=26, css_classes=["hero-card"])
+        hero = self._stack_when_compact(Gtk.Box(spacing=26, css_classes=["hero-card"]))
         hero_copy = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True, valign=Gtk.Align.CENTER
         )
@@ -3450,20 +3503,18 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self.tracking_banner.set_reveal_child(not self.app.scheduler.extension_live())
         content.append(self.tracking_banner)
-        cards = Gtk.Grid(column_spacing=14, row_spacing=14, column_homogeneous=True)
+        cards = self._stack_when_compact(Gtk.Box(spacing=14, homogeneous=True))
         self.screen_value = Gtk.Label(css_classes=["metric-value"], xalign=0)
         self.breaks_value = Gtk.Label(css_classes=["metric-value"], xalign=0)
         self.next_value = Gtk.Label(css_classes=["metric-value", "accent-text"], xalign=0)
-        cards.attach(self._metric_card("Экран сегодня", self.screen_value, "активное время"), 0, 0, 1, 1)
-        cards.attach(self._metric_card("Паузы", self.breaks_value, "выполнено сегодня"), 1, 0, 1, 1)
-        cards.attach(
-            self._metric_card("Следующая пауза", self.next_value, "по активному времени"), 2, 0, 1, 1
-        )
+        cards.append(self._metric_card("Экран сегодня", self.screen_value, "активное время"))
+        cards.append(self._metric_card("Паузы", self.breaks_value, "выполнено сегодня"))
+        cards.append(self._metric_card("Следующая пауза", self.next_value, "по активному времени"))
         content.append(cards)
 
-        health_grid = Gtk.Grid(column_spacing=12, row_spacing=12)
-        health_grid.set_column_homogeneous(False)
-        health_grid.set_hexpand(True)
+        health_grid = self._stack_when_compact(
+            Gtk.Box(spacing=12, hexpand=True, css_classes=["dashboard-health-grid"])
+        )
         wellness = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "wellness-card"]
         )
@@ -3523,11 +3574,12 @@ class MainWindow(Adw.ApplicationWindow):
         wellness_actions.append(wellness_save)
         wellness.append(Gtk.Box(vexpand=True))
         wellness.append(wellness_actions)
-        health_grid.attach(wellness, 0, 0, 2, 1)
+        health_grid.append(wellness)
 
         quick = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "quick-card"])
         quick.set_valign(Gtk.Align.FILL)
         quick.set_size_request(250, -1)
+        self._building_page_breakpoint.add_setter(quick, "hexpand", True)
         quick.append(Gtk.Label(label="Быстрый старт", xalign=0, css_classes=["section-title"]))
         quick.append(
             Gtk.Label(
@@ -3572,11 +3624,16 @@ class MainWindow(Adw.ApplicationWindow):
         quick_context_copy.append(self.quick_next_due)
         quick_context.set_center_widget(quick_context_copy)
         quick.append(quick_context)
-        health_grid.attach(quick, 2, 0, 1, 1)
+        health_grid.append(quick)
         content.append(health_grid)
 
         content.append(Gtk.Label(label="Ближайшие напоминания", xalign=0, css_classes=["section-title"]))
-        self.reminder_grid = Gtk.Grid(column_spacing=12, row_spacing=12, column_homogeneous=True)
+        self.reminder_grid = self._responsive_flow("reminder-flow", spacing=12)
+        self._building_page_breakpoint.add_setter(
+            self.reminder_grid,
+            "max-children-per-line",
+            1,
+        )
         self.reminder_due_labels: dict[str, Gtk.Label] = {}
         self.reminder_title_labels: dict[str, Gtk.Label] = {}
         content.append(self.reminder_grid)
@@ -3608,7 +3665,7 @@ class MainWindow(Adw.ApplicationWindow):
                 "Мягкий визуальный ритм без форсированных вдохов и обязательных задержек.",
             )
         )
-        guide = Gtk.Box(spacing=28, css_classes=["breathing-guide-card"])
+        guide = self._stack_when_compact(Gtk.Box(spacing=28, css_classes=["breathing-guide-card"]))
         self.breathing_orb = BreathingOrb()
         visual = Gtk.Overlay(css_classes=["breathing-visual"])
         visual.set_child(self.breathing_orb)
@@ -3672,7 +3729,9 @@ class MainWindow(Adw.ApplicationWindow):
             css_classes=["breathing-instruction"],
         )
         copy.append(self.breathing_instruction)
-        preset_box = Gtk.Box(spacing=10, homogeneous=True, css_classes=["breathing-presets"])
+        preset_box = self._stack_when_compact(
+            Gtk.Box(spacing=10, homogeneous=True, css_classes=["breathing-presets"])
+        )
         self.breathing_preset_buttons: dict[str, Gtk.Button] = {}
         for key, preset in BREATHING_PRESETS.items():
             button = Gtk.Button(css_classes=["breathing-preset"])
@@ -3759,18 +3818,22 @@ class MainWindow(Adw.ApplicationWindow):
         preset_card.append(preset_box)
         content.append(preset_card)
 
-        metrics = Gtk.Grid(column_spacing=10, column_homogeneous=True)
+        metrics = self._stack_when_compact(
+            Gtk.Box(
+                spacing=10,
+                homogeneous=True,
+                css_classes=["breathing-metrics"],
+            )
+        )
         self.breathing_today_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
         self.breathing_week_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
         self.breathing_minutes_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
-        for index, (title, value, hint) in enumerate(
-            (
-                ("Сегодня", self.breathing_today_value, "завершённых сессий"),
-                ("За 7 дней", self.breathing_week_value, "завершённых сессий"),
-                ("Практика", self.breathing_minutes_value, "за последние 7 дней"),
-            )
+        for title, value, hint in (
+            ("Сегодня", self.breathing_today_value, "завершённых сессий"),
+            ("За 7 дней", self.breathing_week_value, "завершённых сессий"),
+            ("Практика", self.breathing_minutes_value, "за последние 7 дней"),
         ):
-            metrics.attach(self._metric_card(title, value, hint), index, 0, 1, 1)
+            metrics.append(self._metric_card(title, value, hint))
         content.append(metrics)
 
         schedule = Gtk.Box(
@@ -3965,7 +4028,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _build_habits(self) -> Gtk.Widget:
         scroller, content = self._page()
-        head = Gtk.Box(spacing=10)
+        head = self._stack_when_compact(Gtk.Box(spacing=10))
         heading = self._heading(
             "Полезные привычки",
             "Небольшие дневные цели с локальной историей и необязательными напоминаниями.",
@@ -3980,18 +4043,16 @@ class MainWindow(Adw.ApplicationWindow):
         add_button.connect("clicked", self._show_habit_editor, None)
         head.append(add_button)
         content.append(head)
-        summary = Gtk.Grid(column_spacing=10, column_homogeneous=True)
+        summary = self._stack_when_compact(Gtk.Box(spacing=10, homogeneous=True))
         self.habits_done_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
         self.habits_active_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
         self.habits_week_value = Gtk.Label(xalign=0, css_classes=["metric-value"])
-        for index, (title, value, hint) in enumerate(
-            (
-                ("Сегодня", self.habits_done_value, "дневных целей выполнено"),
-                ("Активные", self.habits_active_value, "привычки в вашем плане"),
-                ("За 7 дней", self.habits_week_value, "всего отметок"),
-            )
+        for title, value, hint in (
+            ("Сегодня", self.habits_done_value, "дневных целей выполнено"),
+            ("Активные", self.habits_active_value, "привычки в вашем плане"),
+            ("За 7 дней", self.habits_week_value, "всего отметок"),
         ):
-            summary.attach(self._metric_card(title, value, hint), index, 0, 1, 1)
+            summary.append(self._metric_card(title, value, hint))
         content.append(summary)
         self.habit_list = Gtk.FlowBox(css_classes=["habit-flow"])
         self.habit_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -4345,9 +4406,22 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             )
             series_card.append(header)
-            levels = Gtk.Grid(column_spacing=10, row_spacing=10, column_homogeneous=True)
+            levels = self._responsive_flow("achievement-levels", columns=4)
+            # Eight levels only have balanced 4 x 2 and 2 x 4 layouts. Letting
+            # FlowBox choose three columns creates a partial third row and makes
+            # the fixed responsive height clip cards at intermediate widths.
+            levels.set_min_children_per_line(4)
+            levels_frame = Adw.BreakpointBin()
+            levels_frame.set_size_request(360, 464)
+            levels_frame.set_child(levels)
+            levels_breakpoint = Adw.Breakpoint()
+            levels_breakpoint.set_condition(Adw.BreakpointCondition.parse("max-width: 850sp"))
+            levels_breakpoint.add_setter(levels, "min-children-per-line", 2)
+            levels_breakpoint.add_setter(levels, "max-children-per-line", 2)
+            levels_breakpoint.add_setter(levels_frame, "height-request", 938)
+            levels_frame.add_breakpoint(levels_breakpoint)
             next_locked_seen = False
-            for index, achievement in enumerate(series):
+            for achievement in series:
                 unlocked_at = achievement["unlocked_at"]
                 is_unlocked = unlocked_at is not None
                 is_next = not is_unlocked and not next_locked_seen
@@ -4405,8 +4479,8 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status = f"{progress} / {int(achievement['target'])}"
                 level.append(Gtk.Label(label=status, css_classes=["achievement-status"]))
-                levels.attach(level, index % 4, index // 4, 1, 1)
-            series_card.append(levels)
+                levels.append(level)
+            series_card.append(levels_frame)
             self.achievement_series_box.append(series_card)
 
     def _build_analytics(self) -> Gtk.Widget:
@@ -4422,7 +4496,7 @@ class MainWindow(Adw.ApplicationWindow):
         day_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=8, css_classes=["card", "day-chart-card"]
         )
-        day_head = Gtk.Box(spacing=10)
+        day_head = self._stack_when_compact(Gtk.Box(spacing=10))
         day_head.append(
             Gtk.Label(label="Активность за день", xalign=0, hexpand=True, css_classes=["section-title"])
         )
@@ -4498,23 +4572,21 @@ class MainWindow(Adw.ApplicationWindow):
             orientation=Gtk.Orientation.VERTICAL, spacing=12, css_classes=["card", "exercise-card"]
         )
         exercise_card.append(Gtk.Label(label="Упражнения за 7 дней", xalign=0, css_classes=["section-title"]))
-        exercise_metrics = Gtk.Grid(column_spacing=8, column_homogeneous=True)
+        exercise_metrics = self._stack_when_compact(Gtk.Box(spacing=8, homogeneous=True))
         self.exercise_time_value = Gtk.Label(xalign=0, css_classes=["exercise-value"])
         self.exercise_done_value = Gtk.Label(xalign=0, css_classes=["exercise-value"])
         self.exercise_snoozed_value = Gtk.Label(xalign=0, css_classes=["exercise-value"])
         self.exercise_rate_value = Gtk.Label(xalign=0, css_classes=["exercise-value"])
-        for index, (title, value) in enumerate(
-            (
-                ("В упражнениях", self.exercise_time_value),
-                ("Завершено", self.exercise_done_value),
-                ("Отложено", self.exercise_snoozed_value),
-                ("Без откладывания", self.exercise_rate_value),
-            )
+        for title, value in (
+            ("В упражнениях", self.exercise_time_value),
+            ("Завершено", self.exercise_done_value),
+            ("Отложено", self.exercise_snoozed_value),
+            ("Без откладывания", self.exercise_rate_value),
         ):
             metric = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, css_classes=["exercise-metric"])
             metric.append(Gtk.Label(label=title, xalign=0, css_classes=["muted", "caption"]))
             metric.append(value)
-            exercise_metrics.attach(metric, index, 0, 1, 1)
+            exercise_metrics.append(metric)
         exercise_card.append(exercise_metrics)
         self.exercise_list = Gtk.FlowBox(css_classes=["exercise-flow"])
         self.exercise_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -4529,7 +4601,7 @@ class MainWindow(Adw.ApplicationWindow):
         wellness_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=10, css_classes=["card", "wellness-history-card"]
         )
-        wellness_head = Gtk.Box(spacing=10)
+        wellness_head = self._stack_when_compact(Gtk.Box(spacing=10))
         wellness_head.append(
             Gtk.Label(label="Самочувствие", xalign=0, hexpand=True, css_classes=["section-title"])
         )
@@ -4596,23 +4668,21 @@ class MainWindow(Adw.ApplicationWindow):
             self.wellness_score_labels[key] = score
         wellness_card.append(symptom_grid)
 
-        wellness_summary = Gtk.Grid(column_spacing=8, column_homogeneous=True)
+        wellness_summary = self._stack_when_compact(Gtk.Box(spacing=8, homogeneous=True))
         self.wellness_screen_value = Gtk.Label(xalign=0, css_classes=["wellness-summary-value"])
         self.wellness_breaks_value = Gtk.Label(xalign=0, css_classes=["wellness-summary-value"])
         self.wellness_exercise_value = Gtk.Label(xalign=0, css_classes=["wellness-summary-value"])
-        for index, (title, value) in enumerate(
-            (
-                ("Экранное время", self.wellness_screen_value),
-                ("Паузы", self.wellness_breaks_value),
-                ("В упражнениях", self.wellness_exercise_value),
-            )
+        for title, value in (
+            ("Экранное время", self.wellness_screen_value),
+            ("Паузы", self.wellness_breaks_value),
+            ("В упражнениях", self.wellness_exercise_value),
         ):
             metric = Gtk.Box(
                 orientation=Gtk.Orientation.VERTICAL, spacing=2, css_classes=["wellness-summary"]
             )
             metric.append(Gtk.Label(label=title, xalign=0, css_classes=["muted", "caption"]))
             metric.append(value)
-            wellness_summary.attach(metric, index, 0, 1, 1)
+            wellness_summary.append(metric)
         wellness_card.append(wellness_summary)
         self.wellness_insight = Gtk.Label(xalign=0, wrap=True, css_classes=["wellness-insight", "caption"])
         wellness_card.append(self.wellness_insight)
@@ -4869,19 +4939,13 @@ class MainWindow(Adw.ApplicationWindow):
             section_head.append(Gtk.Label(label=section_title, xalign=0, css_classes=["section-title"]))
             section_head.append(Gtk.Label(label=section_hint, xalign=0, css_classes=["muted", "caption"]))
             content.append(section_head)
-            grid = Gtk.Grid(column_spacing=10, row_spacing=10, column_homogeneous=True)
-            for index, kind in enumerate(kinds):
-                grid.attach(
-                    self._activity_settings_card(kind, labels[kind], subtitles[kind]),
-                    index % 2,
-                    index // 2,
-                    1,
-                    1,
-                )
+            grid = self._responsive_flow("settings-flow")
+            for kind in kinds:
+                grid.append(self._activity_settings_card(kind, labels[kind], subtitles[kind]))
             content.append(grid)
 
         content.append(Gtk.Label(label="Поведение", xalign=0, css_classes=["section-title"]))
-        behavior_grid = Gtk.Grid(column_spacing=14, row_spacing=14, column_homogeneous=True)
+        behavior_grid = self._responsive_flow("settings-flow", spacing=14)
         fullscreen_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=14, css_classes=["settings-card"]
         )
@@ -4925,8 +4989,8 @@ class MainWindow(Adw.ApplicationWindow):
             lambda value: f"{value} {'sec' if self.language == 'en' else 'сек'}",
         )
         idle_card.append(idle_stepper)
-        behavior_grid.attach(fullscreen_card, 0, 0, 1, 1)
-        behavior_grid.attach(idle_card, 1, 0, 1, 1)
+        behavior_grid.append(fullscreen_card)
+        behavior_grid.append(idle_card)
 
         share_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, css_classes=["settings-card"])
         share_head = Gtk.Box(spacing=12)
@@ -4954,7 +5018,7 @@ class MainWindow(Adw.ApplicationWindow):
         share_switch.connect("notify::active", screen_share_changed)
         share_head.append(share_switch)
         share_card.append(share_head)
-        behavior_grid.attach(share_card, 0, 1, 1, 1)
+        behavior_grid.append(share_card)
 
         sound_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, css_classes=["settings-card"])
         sound_head = Gtk.Box(spacing=12)
@@ -5005,7 +5069,7 @@ class MainWindow(Adw.ApplicationWindow):
         update_sound_controls(sound_switch.get_active())
         sound_card.append(volume_row)
         sound_card.append(test_sound)
-        behavior_grid.attach(sound_card, 1, 1, 1, 1)
+        behavior_grid.append(sound_card)
 
         content.append(behavior_grid)
         content.append(self._backup_settings_card())
@@ -5036,7 +5100,7 @@ class MainWindow(Adw.ApplicationWindow):
             spacing=12,
             css_classes=["settings-card", "theme-settings-card"],
         )
-        head = Gtk.Box(spacing=12)
+        head = self._stack_when_compact(Gtk.Box(spacing=12))
         head.append(symbolic_icon("applications-graphics-symbolic"))
         copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
         copy.append(Gtk.Label(label="Оформление", xalign=0, css_classes=["settings-title"]))
@@ -5064,7 +5128,10 @@ class MainWindow(Adw.ApplicationWindow):
         head.append(mode_picker)
         card.append(head)
 
-        schedule = Gtk.Box(spacing=10, homogeneous=True, css_classes=["theme-schedule"])
+        schedule = self._stack_when_compact(
+            Gtk.Box(spacing=10, homogeneous=True, css_classes=["theme-schedule"])
+        )
+        self._building_page_breakpoint.add_setter(schedule, "margin-start", 0)
 
         def make_time_picker(key: str, title: str) -> Gtk.Widget:
             saved = normalize_clock(
@@ -5602,7 +5669,7 @@ class MainWindow(Adw.ApplicationWindow):
                 child = nxt
             self.reminder_due_labels.clear()
             self.reminder_title_labels.clear()
-            for index, (kind, due) in enumerate(enabled_due):
+            for kind, due in enabled_due:
                 box = Gtk.Box(
                     orientation=Gtk.Orientation.VERTICAL, spacing=6, css_classes=["card", "reminder-card"]
                 )
@@ -5622,7 +5689,7 @@ class MainWindow(Adw.ApplicationWindow):
                 head.append(title)
                 box.append(head)
                 box.append(due_label)
-                self.reminder_grid.attach(box, index % 2, index // 2, 1, 1)
+                self.reminder_grid.append(box)
         else:
             due_map = dict(enabled_due)
             for kind, label in self.reminder_due_labels.items():
@@ -6346,9 +6413,8 @@ class ZdorovoApplication(Adw.Application):
         language = str(self.config.data.get("language", "en"))
         if len(unlocked) == 1:
             achievement = unlocked[0]
-            level = achievement_level_mark(int(achievement["level"]))
             title = "Achievement unlocked" if language == "en" else "Новое достижение"
-            body = f"{achievement[f'title_{language}']} · {level}"
+            body = achievement_unlock_body(achievement, language)
         else:
             title = "New achievements" if language == "en" else "Новые достижения"
             body = (

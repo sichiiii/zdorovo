@@ -73,6 +73,25 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(MODULE.breathing_phase(preset, 2), ("inhale", 0.5))
         self.assertEqual(MODULE.breathing_phase(preset, 7), ("exhale", 0.5))
 
+    def test_achievement_series_fill_the_grid_with_reachable_targets(self):
+        grouped = {}
+        for achievement in MODULE.ACHIEVEMENTS:
+            grouped.setdefault(achievement["series"], []).append(achievement)
+        self.assertTrue(all(len(series) == 8 for series in grouped.values()))
+        upper_bounds = {
+            "rhythm": 1000,
+            "eyes": 500,
+            "movement": 500,
+            "breathing": 300,
+            "habits": 1000,
+            "variety": len(MODULE.REMINDER_META),
+            "streak": 365,
+        }
+        for name, series in grouped.items():
+            targets = [int(item["target"]) for item in series]
+            self.assertEqual(targets, sorted(set(targets)), name)
+            self.assertLessEqual(targets[-1], upper_bounds[name], name)
+
     def test_automatic_theme_schedule_crosses_midnight(self):
         def moment(hour, minute=0):
             return MODULE.datetime(2026, 7, 13, hour, minute)
@@ -95,6 +114,19 @@ class CoreTests(unittest.TestCase):
         self.assertNotIn("#E95420", css)
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
         self.assertIn("Gtk.STYLE_PROVIDER_PRIORITY_USER + 1", source)
+
+    def test_calendar_range_and_narrow_pages_remain_visible(self):
+        css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn("if range_start <= target <= range_end:", source)
+        self.assertIn(".range-day.range-inside { color: white; background: #327F79; }", css)
+        self.assertIn(".range-day.range-start.range-end { border-radius: 8px; }", css)
+        self.assertIn("responsive_page = Adw.BreakpointBin()", source)
+        self.assertIn("scrollbar.vertical {\n  min-width: 3px;", css)
+        self.assertIn('parse("max-width: 850sp")', source)
+        self.assertIn("levels.set_min_children_per_line(4)", source)
+        self.assertIn('levels, "min-children-per-line", 2', source)
+        self.assertIn('levels_frame, "height-request", 938', source)
 
     def test_system_notifications_include_visible_details(self):
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
@@ -319,6 +351,7 @@ class CoreTests(unittest.TestCase):
         MODULE.MainWindow._set_reminder_frequency(dummy, "drops", 3)
         MODULE.MainWindow._set_idle_value(dummy, 90)
         MODULE.MainWindow._set_snooze_value(dummy, 12)
+        MODULE.MainWindow._set_reminder_duration(dummy, "eyes", 80)
         MODULE.MainWindow._set_reminder_duration(dummy, "neck", 240)
         MODULE.MainWindow._set_reminder_duration(dummy, "drops", 999)
         saved = MODULE.load_json(MODULE.CONFIG_FILE, {})
@@ -326,8 +359,10 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(saved["reminders"]["drops"]["times_per_day"], 3)
         self.assertEqual(saved["idle_threshold_seconds"], 90)
         self.assertEqual(saved["snooze_minutes"], 12)
+        self.assertEqual(saved["reminders"]["eyes"]["duration_seconds"], 80)
         self.assertEqual(saved["reminders"]["neck"]["duration_seconds"], 240)
         self.assertEqual(saved["reminders"]["drops"]["duration_seconds"], 60)
+        self.assertEqual(MODULE.CUSTOM_DURATION_LIMITS["eyes"], (20, 120, 10))
 
     def test_english_is_default_and_formats_are_localized(self):
         config = MODULE.Config()
@@ -412,6 +447,24 @@ class CoreTests(unittest.TestCase):
             1000,
         )
         self.assertEqual(MODULE.achievement_level_mark(7), "VII")
+        achievement = {"level": 2, "title_en": "Work rhythm", "title_ru": "Рабочий ритм"}
+        self.assertEqual(
+            MODULE.achievement_unlock_body(achievement, "en"),
+            "You reached Level II in Work rhythm.",
+        )
+        self.assertEqual(
+            MODULE.achievement_unlock_body(achievement, "ru"),
+            "Открыт уровень II в серии «Рабочий ритм».",
+        )
+        self.assertNotIn("·", MODULE.achievement_unlock_body(achievement, "en"))
+        self.assertEqual(
+            MODULE.notification_body_for_display("achievement", "Work rhythm · II", "en"),
+            "You reached Level II in Work rhythm.",
+        )
+        self.assertEqual(
+            MODULE.notification_body_for_display("habit", "Walk · now", "en"),
+            "Walk · now",
+        )
         source = MODULE.UsageDatabase(Path(TMP.name) / "achievements.sqlite3")
         for offset in range(10):
             source.log_reminder("eyes", "done", now=MODULE.time.time() + offset, duration_seconds=20)

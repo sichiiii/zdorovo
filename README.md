@@ -48,7 +48,7 @@ workflow:
 | **Guidance that finishes the job** | Each routine can include photos, timed steps, progress and sound cues. |
 | **Quiet when it matters** | Screen sharing, fullscreen activity and manual pause can suppress interruptions without stopping screen-time statistics. |
 | **A local health journal** | Daily wellbeing check-ins can be compared with screen time and completed breaks. |
-| **Progress without pressure** | Healthy habits and 22 emblems across seven multi-level achievement series. |
+| **Progress without pressure** | Healthy habits and 56 emblems across seven eight-level achievement series. |
 
 ## Inside the app
 
@@ -105,7 +105,7 @@ Download the current package from
 [GitHub Releases](https://github.com/sichiiii/zdorovo/releases/latest), then run:
 
 ```bash
-sudo apt install ./zdorovo_0.1.4_all.deb
+sudo apt install ./zdorovo_0.1.5_all.deb
 ```
 
 Open **Zdorovo** from the application list. Its user services start with the
