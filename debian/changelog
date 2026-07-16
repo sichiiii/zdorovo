@@ -1,3 +1,13 @@
+zdorovo (0.1.6) unstable; urgency=medium
+
+  * Add complete teal, burgundy and gray palettes for light and dark modes.
+  * Let users hide daily wellbeing check-ins independently from reminders.
+  * Keep fullscreen viewing in screen-time totals after the idle threshold.
+  * Improve dropdown contrast, Overview spacing and compact Russian settings.
+  * Separate accent selection and remove unused height from Behaviour cards.
+
+ -- CYBERJABKA <sichiiii@users.noreply.github.com>  Thu, 16 Jul 2026 14:50:00 +0300
+
 zdorovo (0.1.5) unstable; urgency=medium
 
   * Give every day inside a selected calendar range a solid visible fill.

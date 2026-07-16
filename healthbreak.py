@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import argparse
 import calendar as pycalendar
+import colorsys
 import json
 import math
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -31,13 +33,14 @@ gi.require_version("Adw", "1")
 gi.require_version("Atspi", "2.0")
 gi.require_version("GioUnix", "2.0")
 gi.require_version("Graphene", "1.0")
+gi.require_version("GdkPixbuf", "2.0")
 gi.require_foreign("cairo")
-from gi.repository import Adw, Atspi, Gdk, Gio, GioUnix, GLib, Graphene, Gtk  # noqa: E402
+from gi.repository import Adw, Atspi, Gdk, GdkPixbuf, Gio, GioUnix, GLib, Graphene, Gtk  # noqa: E402
 
 APP_ID = "io.github.jabka.Zdorovo"
 APP_ICON_NAME = f"{APP_ID}-mint-v2"
 APP_NAME = "Здорово"
-APP_VERSION = "0.1.5"
+APP_VERSION = "0.1.6"
 ROOT = Path(__file__).resolve().parent
 ASSET_ROOT = ROOT / "assets"
 if not ASSET_ROOT.is_dir():
@@ -57,6 +60,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "language_selected": False,
     "dark_mode": False,
     "theme_mode": "light",
+    "color_theme": "teal",
     "theme_light_time": "07:00",
     "theme_dark_time": "21:00",
     "manual_pause": False,
@@ -64,6 +68,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "guided_sound_enabled": True,
     "guided_sound_volume": -8.0,
     "snooze_minutes": 5,
+    "wellness_checkin_enabled": True,
     "wellness_reminders_enabled": True,
     "notification_center_initialized": False,
     "pause_on_screen_share": True,
@@ -107,6 +112,134 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "wrists": {"enabled": False, "interval_minutes": 90, "duration_seconds": 90},
         "breathing": {"enabled": False, "interval_minutes": 120, "duration_seconds": 120},
         "water": {"enabled": False, "interval_minutes": 120, "duration_seconds": 30},
+    },
+}
+
+COLOR_PALETTES: dict[str, dict[str, Any]] = {
+    "teal": {
+        "accent": (0.196, 0.498, 0.475),
+        "accent_hex": "#327F79",
+        "accent_light": (0.56, 0.84, 0.81),
+        "backdrop_light": (0.933, 0.969, 0.965),
+        "backdrop_dark": (0.075, 0.092, 0.091),
+    },
+    "burgundy": {
+        "accent": (0.545, 0.227, 0.29),
+        "accent_hex": "#8B3A4A",
+        "accent_light": (0.89, 0.67, 0.72),
+        "backdrop_light": (0.973, 0.945, 0.951),
+        "backdrop_dark": (0.102, 0.073, 0.08),
+    },
+    "gray": {
+        "accent": (0.39, 0.43, 0.47),
+        "accent_hex": "#646E78",
+        "accent_light": (0.76, 0.79, 0.82),
+        "backdrop_light": (0.953, 0.958, 0.961),
+        "backdrop_dark": (0.075, 0.078, 0.084),
+    },
+}
+
+PALETTE_HEX_REPLACEMENTS: dict[str, dict[str, str]] = {
+    "burgundy": {
+        "#327F79": "#8B3A4A",
+        "#246B66": "#70303D",
+        "#2B756F": "#7C3443",
+        "#4B9B94": "#A75B6A",
+        "#9ED8D2": "#E3ADB8",
+        "#B7E4DF": "#EAC2CA",
+        "#C9EEEA": "#F0D4DA",
+        "#C5EBE7": "#EDCDD4",
+        "#D8F1EE": "#F4E1E5",
+        "#EEF7F6": "#F8F1F3",
+        "#164B47": "#51232D",
+        "#B7E2DD": "#E6BDC5",
+        "#82AAA6": "#C58B97",
+        "#3F5553": "#614B50",
+        "#294D4A": "#552F37",
+        "#203A38": "#44272E",
+        "#E2F3F1": "#F3E3E7",
+    },
+    "gray": {
+        "#327F79": "#646E78",
+        "#246B66": "#505861",
+        "#2B756F": "#5A636D",
+        "#4B9B94": "#7F8994",
+        "#9ED8D2": "#C3C9D0",
+        "#B7E4DF": "#D2D6DB",
+        "#C9EEEA": "#E0E3E6",
+        "#C5EBE7": "#D9DDE1",
+        "#D8F1EE": "#E7E9EB",
+        "#EEF7F6": "#F3F5F6",
+        "#164B47": "#343A40",
+        "#B7E2DD": "#D0D4D8",
+        "#82AAA6": "#A5ADB5",
+        "#3F5553": "#50565D",
+        "#294D4A": "#363D44",
+        "#203A38": "#292F35",
+        "#E2F3F1": "#E6E8EA",
+    },
+}
+
+PALETTE_RGB_REPLACEMENTS: dict[str, dict[tuple[int, int, int], tuple[int, int, int]]] = {
+    "burgundy": {
+        (50, 127, 121): (139, 58, 74),
+        (37, 94, 89): (105, 43, 55),
+        (158, 216, 210): (227, 173, 184),
+        (58, 94, 90): (105, 72, 79),
+        (63, 91, 88): (104, 75, 81),
+        (35, 92, 87): (101, 42, 53),
+        (42, 73, 70): (88, 58, 64),
+        (29, 58, 55): (72, 41, 47),
+        (216, 241, 238): (244, 225, 229),
+        (46, 105, 99): (113, 49, 62),
+        (245, 251, 250): (252, 247, 248),
+        (239, 247, 246): (249, 241, 243),
+        (232, 247, 245): (248, 235, 238),
+        (43, 117, 111): (126, 52, 67),
+        (244, 255, 253): (255, 246, 248),
+        (220, 241, 238): (245, 227, 231),
+        (242, 250, 249): (252, 246, 248),
+        (226, 244, 242): (247, 232, 235),
+        (246, 251, 250): (252, 247, 248),
+        (40, 84, 80): (94, 53, 62),
+        (52, 103, 98): (113, 61, 72),
+        (45, 103, 97): (112, 52, 65),
+        (39, 92, 87): (101, 46, 58),
+        (48, 92, 88): (103, 56, 65),
+        (44, 82, 79): (92, 51, 59),
+        (27, 74, 70): (82, 40, 49),
+        (47, 74, 72): (83, 57, 62),
+        (55, 83, 80): (91, 62, 68),
+    },
+    "gray": {
+        (50, 127, 121): (100, 110, 120),
+        (37, 94, 89): (76, 84, 92),
+        (158, 216, 210): (195, 201, 208),
+        (58, 94, 90): (88, 95, 103),
+        (63, 91, 88): (91, 97, 104),
+        (35, 92, 87): (74, 82, 90),
+        (42, 73, 70): (75, 81, 88),
+        (29, 58, 55): (60, 66, 72),
+        (216, 241, 238): (231, 233, 235),
+        (46, 105, 99): (83, 91, 99),
+        (245, 251, 250): (249, 250, 251),
+        (239, 247, 246): (244, 246, 247),
+        (232, 247, 245): (239, 241, 243),
+        (43, 117, 111): (83, 92, 101),
+        (244, 255, 253): (250, 251, 252),
+        (220, 241, 238): (235, 237, 239),
+        (242, 250, 249): (247, 248, 249),
+        (226, 244, 242): (239, 241, 243),
+        (246, 251, 250): (250, 251, 252),
+        (40, 84, 80): (72, 78, 84),
+        (52, 103, 98): (87, 94, 101),
+        (45, 103, 97): (84, 91, 98),
+        (39, 92, 87): (77, 84, 91),
+        (48, 92, 88): (82, 88, 95),
+        (44, 82, 79): (75, 81, 87),
+        (27, 74, 70): (65, 71, 77),
+        (47, 74, 72): (72, 77, 83),
+        (55, 83, 80): (79, 84, 90),
     },
 }
 
@@ -676,6 +809,67 @@ def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]
     return result
 
 
+def normalize_color_theme(value: Any) -> str:
+    theme = str(value or "teal")
+    return theme if theme in COLOR_PALETTES else "teal"
+
+
+def _palette_rgb(rgb: tuple[int, int, int], color_theme: str) -> tuple[int, int, int]:
+    """Move any remaining teal-tinted CSS colour into the selected palette."""
+    red, green, blue = (channel / 255 for channel in rgb)
+    hue, lightness, saturation = colorsys.rgb_to_hls(red, green, blue)
+    if not (0.42 <= hue <= 0.56 and saturation >= 0.04):
+        return rgb
+    if color_theme == "burgundy":
+        hue = 0.975
+        saturation = min(0.58, saturation * 0.88 + 0.025)
+    elif color_theme == "gray":
+        hue = 0.583
+        saturation = min(0.12, saturation * 0.22)
+    else:
+        return rgb
+    converted = colorsys.hls_to_rgb(hue, lightness, saturation)
+    return tuple(round(channel * 255) for channel in converted)
+
+
+def render_palette_css(stylesheet: str, color_theme: str) -> str:
+    """Render the base teal stylesheet in the selected accent palette."""
+    palette = normalize_color_theme(color_theme)
+    if palette == "teal":
+        return stylesheet
+    rendered = stylesheet
+    for source, target in PALETTE_HEX_REPLACEMENTS[palette].items():
+        rendered = re.sub(re.escape(source), target, rendered, flags=re.IGNORECASE)
+    for source, target in PALETTE_RGB_REPLACEMENTS[palette].items():
+        pattern = rf"rgba\(\s*{source[0]}\s*,\s*{source[1]}\s*,\s*{source[2]}\s*,"
+        replacement = f"rgba({target[0]},{target[1]},{target[2]},"
+        rendered = re.sub(pattern, replacement, rendered)
+
+    def replace_hex(match: re.Match[str]) -> str:
+        value = match.group(0)
+        rgb = tuple(int(value[index : index + 2], 16) for index in (1, 3, 5))
+        converted = _palette_rgb(rgb, palette)
+        return "#" + "".join(f"{channel:02X}" for channel in converted)
+
+    def replace_rgb(match: re.Match[str]) -> str:
+        prefix, red, green, blue = match.groups()
+        converted = _palette_rgb((int(red), int(green), int(blue)), palette)
+        return f"{prefix}({converted[0]},{converted[1]},{converted[2]},"
+
+    rendered = re.sub(r"#[0-9A-Fa-f]{6}\b", replace_hex, rendered)
+    rendered = re.sub(
+        r"\b(rgba)\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,",
+        replace_rgb,
+        rendered,
+    )
+    return rendered
+
+
+def screen_is_being_used(idle_seconds: float, idle_threshold: float, fullscreen: bool) -> bool:
+    """Count a visible fullscreen window even when the pointer stays still."""
+    return bool(fullscreen) or idle_seconds < idle_threshold
+
+
 def atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
@@ -771,6 +965,7 @@ class Config:
         if theme_mode not in ("light", "dark", "auto"):
             theme_mode = "dark" if bool(self.data.get("dark_mode", False)) else "light"
         self.data["theme_mode"] = theme_mode
+        self.data["color_theme"] = normalize_color_theme(self.data.get("color_theme"))
         self.data["theme_light_time"] = normalize_clock(self.data.get("theme_light_time"), "07:00")
         self.data["theme_dark_time"] = normalize_clock(self.data.get("theme_dark_time"), "21:00")
         self.data["snooze_minutes"] = max(1, min(20, int(self.data.get("snooze_minutes", 5))))
@@ -1603,12 +1798,17 @@ class Scheduler:
             )
         self.activity_source = "gnome"
         idle = float(data.get("idle_ms", 999999)) / 1000
-        active = fresh and idle < float(self.config.data["idle_threshold_seconds"])
+        fullscreen = bool(data.get("fullscreen", False))
+        active = fresh and screen_is_being_used(
+            idle,
+            float(self.config.data["idle_threshold_seconds"]),
+            fullscreen,
+        )
         return Activity(
             active=active,
             app_id=str(data.get("app_id") or data.get("wm_class") or "unknown"),
             app_name=str(data.get("app_name") or data.get("wm_class") or "Неизвестное приложение"),
-            fullscreen=bool(data.get("fullscreen", False)),
+            fullscreen=fullscreen,
             screen_sharing=screen_sharing,
         )
 
@@ -1772,7 +1972,9 @@ class Scheduler:
         return GLib.SOURCE_CONTINUE
 
     def _maybe_prompt_wellness(self) -> None:
-        if not bool(self.config.data.get("wellness_reminders_enabled", True)):
+        if not bool(self.config.data.get("wellness_checkin_enabled", True)) or not bool(
+            self.config.data.get("wellness_reminders_enabled", True)
+        ):
             return
         today = datetime.now().date().isoformat()
         if self._active_kind or self.state.get("wellness_answered_day") == today:
@@ -2180,10 +2382,53 @@ def clear_box(box: Gtk.Box | Gtk.ListBox | Gtk.FlowBox) -> None:
         child = next_child
 
 
+_ACTIVE_COLOR_THEME = "teal"
+_PALETTE_TEXTURE_CACHE: dict[tuple[str, str, int], Gdk.Texture] = {}
+
+
+def set_active_color_theme(color_theme: str) -> None:
+    global _ACTIVE_COLOR_THEME
+    normalized = normalize_color_theme(color_theme)
+    if normalized != _ACTIVE_COLOR_THEME:
+        _ACTIVE_COLOR_THEME = normalized
+        _PALETTE_TEXTURE_CACHE.clear()
+
+
+def render_palette_svg(svg: str, color_theme: str) -> str:
+    accent = str(COLOR_PALETTES[normalize_color_theme(color_theme)]["accent_hex"])
+    return re.sub(r"#327F79\b", accent, svg, flags=re.IGNORECASE)
+
+
+def palette_icon_image(kind: str, size: int) -> Gtk.Image:
+    """Load an SVG using the active palette instead of its teal source colour."""
+    path = ASSET_ROOT / "icons" / f"{kind}.svg"
+    cache_key = (_ACTIVE_COLOR_THEME, kind, size)
+    texture = _PALETTE_TEXTURE_CACHE.get(cache_key)
+    if texture is None:
+        try:
+            svg = path.read_text(encoding="utf-8")
+            svg = render_palette_svg(svg, _ACTIVE_COLOR_THEME)
+            loader = GdkPixbuf.PixbufLoader.new_with_type("svg")
+            loader.set_size(size, size)
+            loader.write(svg.encode("utf-8"))
+            loader.close()
+            pixbuf = loader.get_pixbuf()
+            if pixbuf is None:
+                raise ValueError(f"Could not decode {path.name}")
+            texture = Gdk.Texture.new_for_pixbuf(pixbuf)
+            _PALETTE_TEXTURE_CACHE[cache_key] = texture
+        except (GLib.Error, OSError, ValueError):
+            image = Gtk.Image.new_from_file(str(path))
+            image.set_pixel_size(size)
+            return image
+    image = Gtk.Image.new_from_paintable(texture)
+    image.set_pixel_size(size)
+    return image
+
+
 def activity_icon(kind: str, size: int = 25, css_class: str = "activity-icon-shell") -> Gtk.Widget:
     shell = Gtk.CenterBox(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, css_classes=[css_class])
-    image = Gtk.Image.new_from_file(str(ASSET_ROOT / "icons" / f"{kind}.svg"))
-    image.set_pixel_size(size)
+    image = palette_icon_image(kind, size)
     shell.set_center_widget(image)
     return shell
 
@@ -2202,6 +2447,12 @@ def status_banner(title: str) -> Gtk.Revealer:
     surface.set_center_widget(Gtk.Label(label=title, wrap=True, justify=Gtk.Justification.CENTER))
     revealer.set_child(surface)
     return revealer
+
+
+def set_status_banner_state(revealer: Gtk.Revealer, visible: bool) -> None:
+    """Hide inactive revealers completely so Gtk.Box does not reserve spacing."""
+    revealer.set_reveal_child(visible)
+    revealer.set_visible(visible)
 
 
 ACHIEVEMENT_LEVEL_MARKS = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
@@ -2243,8 +2494,7 @@ def achievement_emblem(icon: str, tone: str, level: int, unlocked: bool) -> Gtk.
     )
     ring = Gtk.CenterBox(css_classes=["achievement-emblem-ring"])
     ring.set_size_request(72, 72)
-    image = Gtk.Image.new_from_file(str(ASSET_ROOT / "icons" / f"{icon}.svg"))
-    image.set_pixel_size(34)
+    image = palette_icon_image(icon, 34)
     ring.set_center_widget(image)
     emblem.set_child(ring)
     seal = Gtk.CenterBox(
@@ -2272,9 +2522,10 @@ def cyberjabka_footer(*css_classes: str) -> Gtk.Label:
 class LiquidGlassBackdrop(Gtk.DrawingArea):
     """Static, inexpensive color field that gives translucent controls visual depth."""
 
-    def __init__(self, dark: bool = False) -> None:
+    def __init__(self, dark: bool = False, color_theme: str = "teal") -> None:
         super().__init__()
         self.dark = dark
+        self.color_theme = normalize_color_theme(color_theme)
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.set_draw_func(self._draw)
@@ -2283,25 +2534,32 @@ class LiquidGlassBackdrop(Gtk.DrawingArea):
         self.dark = dark
         self.queue_draw()
 
+    def set_color_theme(self, color_theme: str) -> None:
+        self.color_theme = normalize_color_theme(color_theme)
+        self.queue_draw()
+
     def _draw(self, _area: Gtk.DrawingArea, cr: Any, width: int, height: int) -> None:
-        if self.dark:
-            cr.set_source_rgb(0.092, 0.082, 0.086)
-        else:
-            cr.set_source_rgb(0.933, 0.969, 0.965)
+        palette = COLOR_PALETTES[self.color_theme]
+        cr.set_source_rgb(*(palette["backdrop_dark"] if self.dark else palette["backdrop_light"]))
         cr.paint()
 
 
 class BreathingOrb(Gtk.DrawingArea):
     """Lightweight paced-breathing visual: the solid orb grows and recedes."""
 
-    def __init__(self) -> None:
+    def __init__(self, color_theme: str = "teal") -> None:
         super().__init__(css_classes=["breathing-orb"])
+        self.color_theme = normalize_color_theme(color_theme)
         self.phase = "ready"
         self.phase_progress = 0.0
         self.session_progress = 0.0
         self.set_content_width(250)
         self.set_content_height(250)
         self.set_draw_func(self._draw)
+
+    def set_color_theme(self, color_theme: str) -> None:
+        self.color_theme = normalize_color_theme(color_theme)
+        self.queue_draw()
 
     def set_state(self, phase: str, phase_progress: float, session_progress: float) -> None:
         self.phase = phase
@@ -2310,6 +2568,9 @@ class BreathingOrb(Gtk.DrawingArea):
         self.queue_draw()
 
     def _draw(self, _area: Gtk.DrawingArea, cr: Any, width: int, height: int) -> None:
+        palette = COLOR_PALETTES[self.color_theme]
+        accent = palette["accent"]
+        accent_light = palette["accent_light"]
         cx, cy = width / 2, height / 2
         outer = min(width, height) * 0.39
         for index in range(32):
@@ -2327,7 +2588,7 @@ class BreathingOrb(Gtk.DrawingArea):
         cr.stroke()
         cr.set_line_width(4)
         cr.set_line_cap(1)
-        cr.set_source_rgb(0.56, 0.84, 0.81)
+        cr.set_source_rgb(*accent_light)
         cr.arc(cx, cy, outer, -math.pi / 2, -math.pi / 2 + math.tau * self.session_progress)
         cr.stroke()
         if self.phase == "inhale":
@@ -2337,10 +2598,10 @@ class BreathingOrb(Gtk.DrawingArea):
         else:
             size_factor = 0.62
         radius = outer * size_factor
-        cr.set_source_rgba(0.20, 0.50, 0.47, 0.22)
+        cr.set_source_rgba(*accent, 0.22)
         cr.arc(cx, cy, radius + 14, 0, math.tau)
         cr.fill()
-        cr.set_source_rgb(0.196, 0.498, 0.475)
+        cr.set_source_rgb(*accent)
         cr.arc(cx, cy, radius, 0, math.tau)
         cr.fill()
 
@@ -2426,16 +2687,55 @@ BREATHING_PRESETS: dict[str, dict[str, Any]] = {
 
 
 class ColorSwatch(Gtk.DrawingArea):
-    def __init__(self, color: tuple[float, float, float]) -> None:
+    def __init__(self, color: tuple[float, float, float], size: int = 12) -> None:
         super().__init__()
         self.color = color
-        self.set_content_width(12)
-        self.set_content_height(12)
+        self.set_content_width(size)
+        self.set_content_height(size)
         self.set_draw_func(self._draw)
+
+    def set_color(self, color: tuple[float, float, float]) -> None:
+        self.color = color
+        self.queue_draw()
 
     def _draw(self, _area: Gtk.DrawingArea, cr: Any, width: int, height: int) -> None:
         cr.set_source_rgb(*self.color)
         cr.arc(width / 2, height / 2, min(width, height) / 2, 0, math.tau)
+        cr.fill()
+
+
+class PaletteEmblem(Gtk.DrawingArea):
+    """Small fan of colour cards used beside the palette selector."""
+
+    def __init__(self, color_theme: str) -> None:
+        super().__init__(css_classes=["palette-emblem"])
+        self.color_theme = normalize_color_theme(color_theme)
+        self.set_content_width(40)
+        self.set_content_height(40)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _area: Gtk.DrawingArea, cr: Any, width: int, height: int) -> None:
+        palette = COLOR_PALETTES[self.color_theme]
+        accent = palette["accent"]
+        light = palette["accent_light"]
+        middle = tuple((left + right) / 2 for left, right in zip(accent, light, strict=True))
+        pivot_x, pivot_y = width / 2, height * 0.72
+        for angle, color in zip((-0.38, 0.0, 0.38), (light, middle, accent), strict=True):
+            cr.save()
+            cr.translate(pivot_x, pivot_y)
+            cr.rotate(angle)
+            rounded_rect(cr, -4.5, -23, 9, 25, 3)
+            cr.set_source_rgba(*color, 0.96)
+            cr.fill_preserve()
+            cr.set_source_rgba(1, 1, 1, 0.5)
+            cr.set_line_width(1)
+            cr.stroke()
+            cr.restore()
+        cr.set_source_rgb(*light)
+        cr.arc(pivot_x, pivot_y, 3.4, 0, math.tau)
+        cr.fill()
+        cr.set_source_rgb(*accent)
+        cr.arc(pivot_x, pivot_y, 1.6, 0, math.tau)
         cr.fill()
 
 
@@ -2606,7 +2906,7 @@ class WeekChart(Gtk.DrawingArea):
             px, py = self._pointer
             tx = min(max(6, px - box_w / 2), width - box_w - 6)
             ty = max(5, py - box_h - 12)
-            cr.set_source_rgb(0.14, 0.42, 0.40)
+            cr.set_source_rgb(*COLOR_PALETTES[_ACTIVE_COLOR_THEME]["accent"])
             rounded_rect(cr, tx, ty, box_w, box_h, 7)
             cr.fill()
             cr.select_font_face("Sans", 0, 0)
@@ -2862,7 +3162,7 @@ class DayActivityChart(Gtk.DrawingArea):
             px, py = self._pointer
             tx = min(max(5, px - box_w / 2), width - box_w - 5)
             ty = max(4, py - box_h - 10)
-            cr.set_source_rgb(0.14, 0.42, 0.40)
+            cr.set_source_rgb(*COLOR_PALETTES[_ACTIVE_COLOR_THEME]["accent"])
             rounded_rect(cr, tx, ty, box_w, box_h, 7)
             cr.fill()
             cr.set_source_rgba(1, 1, 1, 0.75)
@@ -3144,8 +3444,7 @@ class MainWindow(Adw.ApplicationWindow):
             tooltip_text=self._t("Уведомления"),
         )
         bell_overlay = Gtk.Overlay()
-        bell_icon = Gtk.Image.new_from_file(str(ASSET_ROOT / "icons" / "bell.svg"))
-        bell_icon.set_pixel_size(21)
+        bell_icon = palette_icon_image("bell", 21)
         bell_overlay.set_child(bell_icon)
         self.notification_badge = Gtk.Label(
             label="0",
@@ -3224,7 +3523,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.stack.set_vexpand(True)
         split.set_end_child(self.stack)
         content_canvas = Gtk.Overlay()
-        self.backdrop = LiquidGlassBackdrop(bool(app.config.data["dark_mode"]))
+        self.backdrop = LiquidGlassBackdrop(
+            bool(app.config.data["dark_mode"]),
+            str(app.config.data.get("color_theme", "teal")),
+        )
         content_canvas.set_child(self.backdrop)
         content_canvas.add_overlay(split)
         toolbar.set_content(content_canvas)
@@ -3491,17 +3793,23 @@ class MainWindow(Adw.ApplicationWindow):
         hero.append(hero_controls)
         content.append(hero)
         self.manual_pause_banner = status_banner("Напоминания на паузе · экранное время продолжает считаться")
-        self.manual_pause_banner.set_reveal_child(bool(self.app.config.data["manual_pause"]))
+        set_status_banner_state(
+            self.manual_pause_banner,
+            bool(self.app.config.data["manual_pause"]),
+        )
         content.append(self.manual_pause_banner)
         self.screen_share_banner = status_banner(
             "Идёт демонстрация экрана · напоминания отложены, экранное время считается"
         )
-        self.screen_share_banner.set_reveal_child(False)
+        set_status_banner_state(self.screen_share_banner, False)
         content.append(self.screen_share_banner)
         self.tracking_banner = status_banner(
             "Считается общее активное время · по приложениям — после следующего входа в GNOME"
         )
-        self.tracking_banner.set_reveal_child(not self.app.scheduler.extension_live())
+        set_status_banner_state(
+            self.tracking_banner,
+            not self.app.scheduler.extension_live(),
+        )
         content.append(self.tracking_banner)
         cards = self._stack_when_compact(Gtk.Box(spacing=14, homogeneous=True))
         self.screen_value = Gtk.Label(css_classes=["metric-value"], xalign=0)
@@ -3520,6 +3828,8 @@ class MainWindow(Adw.ApplicationWindow):
         )
         wellness.set_valign(Gtk.Align.FILL)
         wellness.set_hexpand(True)
+        self.wellness_card = wellness
+        wellness.set_visible(bool(self.app.config.data.get("wellness_checkin_enabled", True)))
         wellness.append(Gtk.Label(label="Самочувствие сейчас", xalign=0, css_classes=["section-title"]))
         wellness.append(
             Gtk.Label(
@@ -3578,6 +3888,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         quick = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, css_classes=["card", "quick-card"])
         quick.set_valign(Gtk.Align.FILL)
+        quick.set_hexpand(True)
         quick.set_size_request(250, -1)
         self._building_page_breakpoint.add_setter(quick, "hexpand", True)
         quick.append(Gtk.Label(label="Быстрый старт", xalign=0, css_classes=["section-title"]))
@@ -3666,7 +3977,7 @@ class MainWindow(Adw.ApplicationWindow):
             )
         )
         guide = self._stack_when_compact(Gtk.Box(spacing=28, css_classes=["breathing-guide-card"]))
-        self.breathing_orb = BreathingOrb()
+        self.breathing_orb = BreathingOrb(str(self.app.config.data.get("color_theme", "teal")))
         visual = Gtk.Overlay(css_classes=["breathing-visual"])
         visual.set_child(self.breathing_orb)
         orb_copy = Gtk.Box(
@@ -4900,6 +5211,7 @@ class MainWindow(Adw.ApplicationWindow):
         content.append(settings_hero)
         content.append(language_card)
         content.append(self._theme_settings_card())
+        content.append(self._palette_settings_card())
         content.append(self._snooze_settings_card())
         content.append(self._wellness_reminder_settings_card())
 
@@ -4946,6 +5258,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         content.append(Gtk.Label(label="Поведение", xalign=0, css_classes=["section-title"]))
         behavior_grid = self._responsive_flow("settings-flow", spacing=14)
+        behavior_grid.add_css_class("behavior-flow")
+        behavior_grid.set_homogeneous(False)
         fullscreen_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=14, css_classes=["settings-card"]
         )
@@ -4976,7 +5290,12 @@ class MainWindow(Adw.ApplicationWindow):
         idle_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
         idle_copy.append(Gtk.Label(label="Бездействие", xalign=0, css_classes=["settings-title"]))
         idle_copy.append(
-            Gtk.Label(label="Когда остановить экранное время", xalign=0, css_classes=["muted", "caption"])
+            Gtk.Label(
+                label="Останавливает счётчик без активности, кроме полноэкранного просмотра",
+                xalign=0,
+                wrap=True,
+                css_classes=["muted", "caption"],
+            )
         )
         idle_head.append(idle_copy)
         idle_card.append(idle_head)
@@ -5100,7 +5419,7 @@ class MainWindow(Adw.ApplicationWindow):
             spacing=12,
             css_classes=["settings-card", "theme-settings-card"],
         )
-        head = self._stack_when_compact(Gtk.Box(spacing=12))
+        head = Gtk.Box(spacing=12)
         head.append(symbolic_icon("applications-graphics-symbolic"))
         copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
         copy.append(Gtk.Label(label="Оформление", xalign=0, css_classes=["settings-title"]))
@@ -5175,6 +5494,72 @@ class MainWindow(Adw.ApplicationWindow):
             self.app.apply_color_scheme()
 
         mode_picker.connect("notify::selected", mode_changed)
+
+        return card
+
+    def _palette_settings_card(self) -> Gtk.Widget:
+        palettes = ("teal", "burgundy", "gray")
+        names = ("Teal", "Burgundy", "Gray") if self.language == "en" else ("Бирюзовая", "Бордовая", "Серая")
+        current = normalize_color_theme(self.app.config.data.get("color_theme"))
+        card = Gtk.Box(
+            spacing=14,
+            css_classes=["card", "language-card", "palette-settings-card"],
+        )
+        card.append(PaletteEmblem(current))
+        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
+        copy.append(Gtk.Label(label="Цветовая тема", xalign=0, css_classes=["settings-title"]))
+        copy.append(
+            Gtk.Label(
+                label="Один акцент для светлого и тёмного оформления",
+                xalign=0,
+                wrap=True,
+                css_classes=["muted", "caption"],
+            )
+        )
+        card.append(copy)
+
+        model = Gtk.StringList.new(list(names))
+        picker = Gtk.DropDown(model=model)
+        picker.add_css_class("palette-picker")
+        picker.set_selected(palettes.index(current))
+        picker.set_valign(Gtk.Align.CENTER)
+
+        def palette_factory() -> Gtk.SignalListItemFactory:
+            factory = Gtk.SignalListItemFactory()
+
+            def setup(_factory: Gtk.SignalListItemFactory, item: Gtk.ListItem) -> None:
+                row = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
+                dot = ColorSwatch(COLOR_PALETTES["teal"]["accent"], 11)
+                dot.add_css_class("palette-option-dot")
+                row.append(dot)
+                row.append(Gtk.Label(xalign=0))
+                item.set_child(row)
+
+            def bind(_factory: Gtk.SignalListItemFactory, item: Gtk.ListItem) -> None:
+                position = max(0, min(len(palettes) - 1, item.get_position()))
+                row = item.get_child()
+                dot = row.get_first_child()
+                label = dot.get_next_sibling()
+                dot.set_color(COLOR_PALETTES[palettes[position]]["accent"])
+                label.set_text(names[position])
+
+            factory.connect("setup", setup)
+            factory.connect("bind", bind)
+            return factory
+
+        picker.set_factory(palette_factory())
+        picker.set_list_factory(palette_factory())
+
+        def palette_changed(widget: Gtk.DropDown, _pspec: Any) -> None:
+            palette = palettes[widget.get_selected()]
+            if palette == self.app.config.data.get("color_theme"):
+                return
+            self.app.config.data["color_theme"] = palette
+            self.app.config.save()
+            self.app.apply_palette()
+
+        picker.connect("notify::selected", palette_changed)
+        card.append(picker)
         return card
 
     def _language_changed(self, picker: Gtk.DropDown, _pspec: Any) -> None:
@@ -5335,9 +5720,12 @@ class MainWindow(Adw.ApplicationWindow):
             restored_config["theme_dark_time"] = normalize_clock(
                 restored_config.get("theme_dark_time"), "21:00"
             )
+            restored_config["color_theme"] = normalize_color_theme(restored_config.get("color_theme"))
             self.app.db.restore_tables(analytics)
             self.app.config.data = restored_config
             self.app.config.save()
+            set_active_color_theme(str(restored_config["color_theme"]))
+            self.app._load_css()
             self.app.apply_color_scheme()
             self.app.rebuild_window("settings")
         except (OSError, ValueError, TypeError, sqlite3.Error) as error:
@@ -5386,11 +5774,44 @@ class MainWindow(Adw.ApplicationWindow):
         return card
 
     def _wellness_reminder_settings_card(self) -> Gtk.Widget:
-        card = Gtk.Box(spacing=12, css_classes=["settings-card", "wellness-reminder-settings-card"])
-        card.append(symbolic_icon("user-available-symbolic"))
+        card = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=10,
+            css_classes=["settings-card", "wellness-reminder-settings-card"],
+        )
+        head = Gtk.Box(spacing=12)
+        head.append(symbolic_icon("user-available-symbolic"))
         copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
-        copy.append(Gtk.Label(label="Оценка самочувствия", xalign=0, css_classes=["settings-title"]))
         copy.append(
+            Gtk.Label(
+                label="Ежедневная оценка самочувствия",
+                xalign=0,
+                css_classes=["settings-title"],
+            )
+        )
+        copy.append(
+            Gtk.Label(
+                label="Показывать карточку самочувствия на главном экране",
+                xalign=0,
+                wrap=True,
+                css_classes=["muted", "caption"],
+            )
+        )
+        head.append(copy)
+        enabled = Gtk.Switch(
+            active=bool(self.app.config.data.get("wellness_checkin_enabled", True)),
+            valign=Gtk.Align.CENTER,
+        )
+        head.append(enabled)
+        card.append(head)
+
+        reminder_row = Gtk.Box(spacing=10, css_classes=["settings-subrow"])
+        reminder_row.append(symbolic_icon("alarm-symbolic", 17, "settings-subrow-icon"))
+        reminder_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        reminder_copy.append(
+            Gtk.Label(label="Напоминания об оценке", xalign=0, css_classes=["settings-title"])
+        )
+        reminder_copy.append(
             Gtk.Label(
                 label="До трёх напоминаний в день; после ответа больше не беспокоит",
                 xalign=0,
@@ -5398,11 +5819,26 @@ class MainWindow(Adw.ApplicationWindow):
                 css_classes=["muted", "caption"],
             )
         )
-        card.append(copy)
-        enabled = Gtk.Switch(
+        reminder_row.append(reminder_copy)
+        reminders_enabled = Gtk.Switch(
             active=bool(self.app.config.data.get("wellness_reminders_enabled", True)),
             valign=Gtk.Align.CENTER,
         )
+        reminder_row.append(reminders_enabled)
+        reminder_row.set_sensitive(enabled.get_active())
+        card.append(reminder_row)
+
+        def wellness_checkin_changed(switch: Gtk.Switch, _pspec: Any) -> None:
+            active = switch.get_active()
+            self.app.config.data["wellness_checkin_enabled"] = active
+            self.app.config.save()
+            reminder_row.set_sensitive(active)
+            self.app.scheduler.state["wellness_active_seconds"] = 0.0
+            self.app.scheduler.state["wellness_prompt_count"] = 0
+            self.app.scheduler._save_state()
+            if not active:
+                self.app.withdraw_notification("wellness-checkin")
+            self.refresh()
 
         def wellness_reminders_changed(switch: Gtk.Switch, _pspec: Any) -> None:
             self.app.config.data["wellness_reminders_enabled"] = switch.get_active()
@@ -5410,8 +5846,8 @@ class MainWindow(Adw.ApplicationWindow):
             if not switch.get_active():
                 self.app.withdraw_notification("wellness-checkin")
 
-        enabled.connect("notify::active", wellness_reminders_changed)
-        card.append(enabled)
+        enabled.connect("notify::active", wellness_checkin_changed)
+        reminders_enabled.connect("notify::active", wellness_reminders_changed)
         return card
 
     def _activity_settings_card(self, kind: str, title: str, subtitle: str) -> Gtk.Widget:
@@ -5593,12 +6029,20 @@ class MainWindow(Adw.ApplicationWindow):
 
     def refresh(self, rebuild_lists: bool = True) -> None:
         self._refresh_notification_center()
-        self.manual_pause_banner.set_reveal_child(bool(self.app.config.data["manual_pause"]))
-        activity = self.app.scheduler.read_activity()
-        self.screen_share_banner.set_reveal_child(
-            bool(self.app.config.data.get("pause_on_screen_share", True)) and activity.screen_sharing
+        set_status_banner_state(
+            self.manual_pause_banner,
+            bool(self.app.config.data["manual_pause"]),
         )
-        self.tracking_banner.set_reveal_child(self.app.scheduler.activity_source == "session")
+        activity = self.app.scheduler.read_activity()
+        set_status_banner_state(
+            self.screen_share_banner,
+            bool(self.app.config.data.get("pause_on_screen_share", True)) and activity.screen_sharing,
+        )
+        set_status_banner_state(
+            self.tracking_banner,
+            self.app.scheduler.activity_source == "session",
+        )
+        self.wellness_card.set_visible(bool(self.app.config.data.get("wellness_checkin_enabled", True)))
         self.screen_value.set_text(format_duration(self.app.db.total_for_day(), self.language))
         done, _ = self.app.db.reminder_counts()
         self.breaks_value.set_text(str(done))
@@ -5895,6 +6339,13 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.remove_css_class("dark-mode")
         self.backdrop.set_dark(dark)
+        self.apply_palette_state()
+
+    def apply_palette_state(self) -> None:
+        palette = normalize_color_theme(self.app.config.data.get("color_theme"))
+        self.backdrop.set_color_theme(palette)
+        if hasattr(self, "breathing_orb"):
+            self.breathing_orb.set_color_theme(palette)
 
     def _theme_changed(self, switch: Gtk.Switch, _pspec: Any) -> None:
         if self._syncing_theme_control:
@@ -6164,9 +6615,11 @@ class ZdorovoApplication(Adw.Application):
         self.background = background
         self.trigger_kind = trigger
         self.config = Config()
+        set_active_color_theme(str(self.config.data.get("color_theme", "teal")))
         self.db = UsageDatabase()
         self.window: MainWindow | None = None
         self.overlay: FallbackOverlay | None = None
+        self._css_provider: Gtk.CssProvider | None = None
         self._restore_window_after_overlay = False
         self.scheduler = Scheduler(
             self.config,
@@ -6182,6 +6635,7 @@ class ZdorovoApplication(Adw.Application):
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
+        set_active_color_theme(str(self.config.data.get("color_theme", "teal")))
         Gtk.Window.set_default_icon_name(APP_ICON_NAME)
         self.apply_color_scheme()
         self.hold()
@@ -6240,15 +6694,32 @@ class ZdorovoApplication(Adw.Application):
         self.window.present()
 
     def _load_css(self) -> None:
+        stylesheet = (ASSET_ROOT / "style.css").read_text(encoding="utf-8")
+        stylesheet = render_palette_css(
+            stylesheet,
+            str(self.config.data.get("color_theme", "teal")),
+        )
         provider = Gtk.CssProvider()
-        provider.load_from_path(str(ASSET_ROOT / "style.css"))
+        provider.load_from_data(stylesheet.encode("utf-8"))
         display = Gdk.Display.get_default()
         if display:
+            if self._css_provider is not None:
+                Gtk.StyleContext.remove_provider_for_display(display, self._css_provider)
             # ~/.config/gtk-4.0/gtk.css is loaded at USER (800).  Custom desktop
             # themes often hard-code their accent there, after application CSS.
             # Use one level above it so Zdorovo's own palette remains local and
             # deterministic without changing the user's system-wide theme.
             Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+        self._css_provider = provider
+
+    def apply_palette(self) -> None:
+        self.config.data["color_theme"] = normalize_color_theme(self.config.data.get("color_theme"))
+        self.config.save()
+        set_active_color_theme(str(self.config.data["color_theme"]))
+        self._load_css()
+        if self.window:
+            page = self.window.stack.get_visible_child_name() or "settings"
+            GLib.idle_add(self.rebuild_window, page)
 
     def effective_dark_mode(self) -> bool:
         mode = str(self.config.data.get("theme_mode", "light"))
@@ -6329,6 +6800,10 @@ class ZdorovoApplication(Adw.Application):
         self.overlay.present()
 
     def _prompt_wellness(self) -> None:
+        if not bool(self.config.data.get("wellness_checkin_enabled", True)) or not bool(
+            self.config.data.get("wellness_reminders_enabled", True)
+        ):
+            return
         language = str(self.config.data.get("language", "en"))
         self.push_app_notification(
             "wellness",

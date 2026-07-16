@@ -231,41 +231,59 @@ window {
   color: #327F79;
   background: rgba(255,255,255,0.62);
 }
-.language-picker button, .theme-picker button, .theme-time-picker button {
+.language-picker button, .theme-picker button, .theme-time-picker button,
+.palette-picker button {
   min-width: 142px;
   min-height: 36px;
   padding: 2px 11px;
   color: #3d394f;
   font-weight: 720;
-  background: rgba(255,255,255,0.68);
-  border: 1px solid rgba(255,255,255,0.90);
+  background: rgba(250,252,252,0.96);
+  border: 1px solid rgba(50,127,121,0.26);
   border-radius: 9px;
-  box-shadow: none;
+  box-shadow: inset 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(37,94,89,0.08);
 }
-.language-picker button:hover, .theme-picker button:hover, .theme-time-picker button:hover {
+.language-picker button:hover, .theme-picker button:hover, .theme-time-picker button:hover,
+.palette-picker button:hover {
   color: #246B66;
-  background: rgba(255,255,255,0.92);
+  background: white;
+  border-color: rgba(50,127,121,0.42);
 }
-.language-picker button label, .theme-picker button label, .theme-time-picker button label {
-  color: #746d80;
+.language-picker button label, .theme-picker button label, .theme-time-picker button label,
+.palette-picker button label {
+  color: #625b70;
   font-weight: 700;
 }
 .language-picker button:hover label, .theme-picker button:hover label,
-.theme-time-picker button:hover label { color: #625b70; }
+.theme-time-picker button:hover label, .palette-picker button:hover label { color: #4f495b; }
 .language-picker popover contents, .theme-picker popover contents,
-.theme-time-picker popover contents {
+.theme-time-picker popover contents, .palette-picker popover contents {
   padding: 5px;
   background: rgba(250,248,250,0.98);
-  border: 1px solid rgba(50,127,121,0.12);
+  border: 1px solid rgba(50,127,121,0.26);
   border-radius: 10px;
   box-shadow: 0 14px 34px rgba(30,24,37,0.18);
 }
 .language-picker popover row, .theme-picker popover row,
-.theme-time-picker popover row { border-radius: 7px; padding: 7px 9px; }
+.theme-time-picker popover row, .palette-picker popover row { border-radius: 7px; padding: 7px 9px; }
 .language-picker popover row:selected, .theme-picker popover row:selected,
-.theme-time-picker popover row:selected { color: white; background: #327F79; }
+.theme-time-picker popover row:selected, .palette-picker popover row:selected {
+  color: white;
+  background: #327F79;
+}
 .theme-settings-card { min-height: 0; }
 .theme-picker button { min-width: 150px; }
+.palette-picker button { min-width: 150px; }
+.palette-settings-card { min-height: 0; }
+.palette-emblem {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.90);
+  box-shadow: 0 4px 12px rgba(37,94,89,0.12);
+}
+.palette-option-dot { min-width: 11px; min-height: 11px; }
 .theme-schedule { margin-left: 50px; }
 .theme-time-control {
   min-height: 38px;
@@ -278,6 +296,20 @@ window {
 .snooze-settings-card { min-height: 48px; }
 .snooze-settings-card .frequency-control { min-width: 200px; }
 .wellness-reminder-settings-card { min-height: 48px; }
+.settings-subrow {
+  margin-left: 50px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(50,127,121,0.055);
+  border: 1px solid rgba(50,127,121,0.10);
+}
+.settings-subrow-icon {
+  min-width: 30px;
+  min-height: 30px;
+  color: #327F79;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.72);
+}
 .backup-card { min-height: 48px; }
 .data-button {
   min-height: 34px;
@@ -703,6 +735,8 @@ scrollbar.horizontal slider {
   border: 0;
   box-shadow: none;
 }
+.behavior-flow flowboxchild { min-height: 0; }
+.behavior-flow .settings-card { min-height: 0; }
 .achievement-levels flowboxchild { min-width: 150px; }
 
 .notification-button {
@@ -1182,25 +1216,44 @@ scrollbar.horizontal slider {
 .dark-mode .wellness-insight { color: #c9bec3; background: rgba(255,255,255,0.055); }
 .dark-mode .language-icon { color: #9ED8D2; background: rgba(255,255,255,0.07); }
 .dark-mode .language-picker button, .dark-mode .theme-picker button,
-.dark-mode .theme-time-picker button {
+.dark-mode .theme-time-picker button, .dark-mode .palette-picker button {
   color: #f2ecee;
   background: rgba(255,255,255,0.07);
   border-color: rgba(255,255,255,0.12);
+  box-shadow: none;
 }
 .dark-mode .language-picker button:hover, .dark-mode .theme-picker button:hover,
-.dark-mode .theme-time-picker button:hover { background: rgba(255,255,255,0.12); }
+.dark-mode .theme-time-picker button:hover, .dark-mode .palette-picker button:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(158,216,210,0.28);
+}
 .dark-mode .language-picker button label, .dark-mode .theme-picker button label,
-.dark-mode .theme-time-picker button label { color: #b8aeb3; }
+.dark-mode .theme-time-picker button label, .dark-mode .palette-picker button label { color: #c8bec3; }
 .dark-mode .language-picker button:hover label, .dark-mode .theme-picker button:hover label,
-.dark-mode .theme-time-picker button:hover label { color: #d7cdd1; }
+.dark-mode .theme-time-picker button:hover label, .dark-mode .palette-picker button:hover label {
+  color: #e3dadd;
+}
 .dark-mode .language-picker popover contents, .dark-mode .theme-picker popover contents,
-.dark-mode .theme-time-picker popover contents {
+.dark-mode .theme-time-picker popover contents, .dark-mode .palette-picker popover contents {
   background: #282429;
   border-color: rgba(255,255,255,0.11);
 }
 .dark-mode .theme-time-control {
   background: rgba(255,255,255,0.045);
   border-color: rgba(255,255,255,0.08);
+}
+.dark-mode .settings-subrow {
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(255,255,255,0.09);
+}
+.dark-mode .palette-emblem {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: none;
+}
+.dark-mode .settings-subrow-icon {
+  color: #9ED8D2;
+  background: rgba(255,255,255,0.07);
 }
 .dark-mode .data-button { color: #e8dfe2; background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
 .dark-mode .data-button:hover { color: white; background: rgba(255,255,255,0.12); }

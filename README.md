@@ -44,7 +44,7 @@ workflow:
 | | |
 |---|---|
 | **Useful pauses** | Rotating routines for eye rest, movement, neck and shoulders, lower back, hands and breathing. |
-| **Active-work timing** | Reminder clocks advance while you are actually using the computer, not while it sits idle. |
+| **Active-work timing** | Reminder clocks advance while you use the computer; fullscreen viewing remains counted even when the pointer is still. |
 | **Guidance that finishes the job** | Each routine can include photos, timed steps, progress and sound cues. |
 | **Quiet when it matters** | Screen sharing, fullscreen activity and manual pause can suppress interruptions without stopping screen-time statistics. |
 | **A local health journal** | Daily wellbeing check-ins can be compared with screen time and completed breaks. |
@@ -76,7 +76,7 @@ workflow:
   <tr>
     <td colspan="2">
       <img src="docs/screenshots/settings.png" alt="Zdorovo settings">
-      <p align="center"><strong>Your routine, your rules</strong><br><sub>Every activity can be enabled, disabled and tuned independently. Light and dark themes are built in.</sub></p>
+      <p align="center"><strong>Your routine, your rules</strong><br><sub>Every activity can be tuned independently, with three accent palettes and light, dark or scheduled appearance.</sub></p>
     </td>
   </tr>
 </table>
@@ -105,7 +105,7 @@ Download the current package from
 [GitHub Releases](https://github.com/sichiiii/zdorovo/releases/latest), then run:
 
 ```bash
-sudo apt install ./zdorovo_0.1.5_all.deb
+sudo apt install ./zdorovo_0.1.6_all.deb
 ```
 
 Open **Zdorovo** from the application list. Its user services start with the

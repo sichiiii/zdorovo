@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.6 — 2026-07-16
+
+- three complete accent palettes: teal, burgundy and gray;
+- every palette now covers light and dark appearance, SVG activity icons, charts, controls and drawn visuals;
+- accent selection has its own Settings card with a custom palette emblem and colour markers in the dropdown;
+- appearance mode and automatic switch times stay together and reflow cleanly in Russian;
+- dark dropdowns use a quiet even border without a bright upper edge;
+- daily wellbeing check-ins can be hidden independently from their reminder schedule;
+- dropdowns have clearer boundaries on light backgrounds;
+- hidden Overview status banners no longer reserve empty vertical space;
+- Behaviour cards keep their natural height instead of inheriting empty space from the largest card;
+- fullscreen viewing continues to count as screen time even after the normal idle threshold;
+- palette, wellbeing and automatic-theme choices remain part of export and import.
+
 ## 0.1.5 — 2026-07-13
 
 - every day inside a selected calendar interval now has a solid visible fill;

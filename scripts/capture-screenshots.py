@@ -40,13 +40,18 @@ CAPTURES = (
 )
 
 
-def seed_demo(app: healthbreak.ZdorovoApplication, language: str = "en") -> None:
+def seed_demo(
+    app: healthbreak.ZdorovoApplication,
+    language: str = "en",
+    color_theme: str = "teal",
+) -> None:
     app.config.data.update(
         {
             "language": language,
             "language_selected": True,
             "dark_mode": False,
             "theme_mode": "light",
+            "color_theme": color_theme,
             "notification_center_initialized": True,
             "wellness_reminders_enabled": True,
         }
@@ -154,8 +159,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--page", choices=[name for name, _page, _dark in CAPTURES])
     parser.add_argument("--language", choices=("en", "ru"), default="en")
+    parser.add_argument("--color-theme", choices=("teal", "burgundy", "gray"), default="teal")
+    parser.add_argument("--theme", choices=("default", "light", "dark"), default="default")
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT)
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=800)
+    parser.add_argument("--scroll", type=float, default=0)
     args = parser.parse_args()
     if not args.page:
         try:
@@ -168,10 +177,18 @@ def main() -> int:
                         name,
                         "--language",
                         args.language,
+                        "--color-theme",
+                        args.color_theme,
+                        "--theme",
+                        args.theme,
+                        "--output-dir",
+                        str(args.output_dir),
                         "--width",
                         str(args.width),
                         "--height",
                         str(args.height),
+                        "--scroll",
+                        str(args.scroll),
                     ],
                     check=True,
                 )
@@ -180,7 +197,8 @@ def main() -> int:
             shutil.rmtree(PROFILE, ignore_errors=True)
 
     captures = tuple(capture for capture in CAPTURES if capture[0] == args.page)
-    OUTPUT.mkdir(parents=True, exist_ok=True)
+    output_dir = args.output_dir.expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     base_window = healthbreak.MainWindow
 
@@ -192,7 +210,7 @@ def main() -> int:
 
     healthbreak.MainWindow = CaptureWindow
     app = healthbreak.ZdorovoApplication()
-    seed_demo(app, args.language)
+    seed_demo(app, args.language, args.color_theme)
     state = {"index": 0}
 
     def capture_current() -> bool:
@@ -201,7 +219,13 @@ def main() -> int:
             return GLib.SOURCE_REMOVE
         name, _page, _dark = captures[state["index"]]
         suffix = "" if args.language == "en" else f"-{args.language}"
-        save_window(window, OUTPUT / f"{name}{suffix}.png")
+        if args.color_theme != "teal":
+            suffix += f"-{args.color_theme}"
+        if args.theme != "default":
+            suffix += f"-{args.theme}"
+        if args.scroll > 0:
+            suffix += f"-scroll-{int(args.scroll)}"
+        save_window(window, output_dir / f"{name}{suffix}.png")
         state["index"] += 1
         if state["index"] >= len(captures):
             app.quit()
@@ -213,7 +237,8 @@ def main() -> int:
         window = app.window
         if window is None:
             return GLib.SOURCE_REMOVE
-        _name, page, dark = captures[state["index"]]
+        _name, page, default_dark = captures[state["index"]]
+        dark = default_dark if args.theme == "default" else args.theme == "dark"
         window.set_visible(False)
         app.config.data["dark_mode"] = dark
         app.config.data["theme_mode"] = "dark" if dark else "light"
@@ -224,7 +249,25 @@ def main() -> int:
         window.refresh(rebuild_lists=True)
         window.present()
         window.queue_draw()
-        GLib.timeout_add(650, capture_current)
+
+        def scroll_then_capture() -> bool:
+            if args.scroll > 0:
+                pending = [window.stack.get_visible_child()]
+                while pending:
+                    widget = pending.pop()
+                    if isinstance(widget, Gtk.ScrolledWindow):
+                        adjustment = widget.get_vadjustment()
+                        maximum = max(0.0, adjustment.get_upper() - adjustment.get_page_size())
+                        adjustment.set_value(min(args.scroll, maximum))
+                        break
+                    child = widget.get_first_child() if widget else None
+                    while child:
+                        pending.append(child)
+                        child = child.get_next_sibling()
+            GLib.timeout_add(250, capture_current)
+            return GLib.SOURCE_REMOVE
+
+        GLib.timeout_add(400, scroll_then_capture)
         return GLib.SOURCE_REMOVE
 
     def wait_for_window() -> bool:

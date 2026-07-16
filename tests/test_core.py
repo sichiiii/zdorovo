@@ -17,7 +17,12 @@ SPEC.loader.exec_module(MODULE)
 
 class CoreTests(unittest.TestCase):
     def setUp(self):
-        for path in (MODULE.STATE_FILE, MODULE.REMINDER_FILE, MODULE.RESPONSE_FILE):
+        for path in (
+            MODULE.STATE_FILE,
+            MODULE.REMINDER_FILE,
+            MODULE.RESPONSE_FILE,
+            MODULE.ACTIVITY_FILE,
+        ):
             path.unlink(missing_ok=True)
 
     def test_deep_merge_preserves_defaults(self):
@@ -27,6 +32,67 @@ class CoreTests(unittest.TestCase):
         self.assertTrue(value["dark_mode"])
         self.assertEqual(value["reminders"]["eyes"]["interval_minutes"], 25)
         self.assertIn("general", value["reminders"])
+        self.assertTrue(value["wellness_checkin_enabled"])
+        self.assertEqual(value["color_theme"], "teal")
+
+    def test_accent_palettes_render_and_validate(self):
+        css = "@define-color accent #327F79; border: rgba(50,127,121,0.26);"
+        burgundy = MODULE.render_palette_css(css, "burgundy")
+        gray = MODULE.render_palette_css(css, "gray")
+        self.assertIn("#8B3A4A", burgundy)
+        self.assertIn("rgba(139,58,74,0.26)", burgundy)
+        self.assertIn("#646E78", gray)
+        self.assertNotEqual(burgundy, gray)
+        self.assertEqual(MODULE.normalize_color_theme("unknown"), "teal")
+
+        full_css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        for palette in ("burgundy", "gray"):
+            rendered = MODULE.render_palette_css(full_css, palette)
+            for teal_token in (
+                "#327F79",
+                "#246B66",
+                "#2B756F",
+                "#4B9B94",
+                "#9ED8D2",
+                "#294D4A",
+                "#203A38",
+                "rgba(43, 117, 111,",
+            ):
+                self.assertNotIn(teal_token.lower(), rendered.lower(), (palette, teal_token))
+
+        svg = '<path stroke="#327F79"/>'
+        self.assertIn("#8B3A4A", MODULE.render_palette_svg(svg, "burgundy"))
+        self.assertIn("#646E78", MODULE.render_palette_svg(svg, "gray"))
+
+    def test_fullscreen_viewing_counts_past_idle_threshold(self):
+        self.assertTrue(MODULE.screen_is_being_used(3600, 60, True))
+        self.assertFalse(MODULE.screen_is_being_used(61, 60, False))
+        config = MODULE.Config()
+        MODULE.atomic_json(
+            MODULE.ACTIVITY_FILE,
+            {
+                "timestamp": MODULE.time.time(),
+                "idle_ms": 3_600_000,
+                "app_id": "browser.desktop",
+                "app_name": "Browser",
+                "fullscreen": True,
+                "screen_sharing": False,
+            },
+        )
+        db = MODULE.UsageDatabase(Path(TMP.name) / "fullscreen.sqlite3")
+        activity = MODULE.Scheduler(config, db, lambda _payload: None).read_activity()
+        self.assertTrue(activity.active)
+        self.assertTrue(activity.fullscreen)
+        self.assertEqual(activity.app_id, "browser.desktop")
+
+    def test_hidden_status_banners_do_not_reserve_space(self):
+        calls = []
+        revealer = SimpleNamespace(
+            set_reveal_child=lambda value: calls.append(("reveal", value)),
+            set_visible=lambda value: calls.append(("visible", value)),
+        )
+        MODULE.set_status_banner_state(revealer, False)
+        self.assertEqual(calls, [("reveal", False), ("visible", False)])
 
     def test_database_aggregates_per_app(self):
         db = MODULE.UsageDatabase(Path(TMP.name) / "test.sqlite3")
@@ -123,6 +189,10 @@ class CoreTests(unittest.TestCase):
         self.assertIn(".range-day.range-start.range-end { border-radius: 8px; }", css)
         self.assertIn("responsive_page = Adw.BreakpointBin()", source)
         self.assertIn("scrollbar.vertical {\n  min-width: 3px;", css)
+        self.assertIn("border: 1px solid rgba(50,127,121,0.26);", css)
+        self.assertIn(".palette-picker button", css)
+        self.assertIn("class PaletteEmblem", source)
+        self.assertIn("behavior_grid.set_homogeneous(False)", source)
         self.assertIn('parse("max-width: 850sp")', source)
         self.assertIn("levels.set_min_children_per_line(4)", source)
         self.assertIn('levels, "min-children-per-line", 2', source)
@@ -594,6 +664,13 @@ class CoreTests(unittest.TestCase):
         scheduler = MODULE.Scheduler(
             config, db, lambda _payload: None, prompt_wellness=lambda: prompts.append(1)
         )
+        scheduler.state["wellness_active_seconds"] = 8 * 3600
+        scheduler._maybe_prompt_wellness()
+        self.assertEqual(prompts, [])
+        self.assertEqual(scheduler.state["wellness_prompt_count"], 0)
+
+        config.data["wellness_reminders_enabled"] = True
+        config.data["wellness_checkin_enabled"] = False
         scheduler.state["wellness_active_seconds"] = 8 * 3600
         scheduler._maybe_prompt_wellness()
         self.assertEqual(prompts, [])
