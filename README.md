@@ -54,6 +54,12 @@ workflow:
 
 <table>
   <tr>
+    <td colspan="2">
+      <img src="docs/screenshots/exercise.png" alt="A guided movement break in progress">
+      <p align="center"><strong>A break that guides itself</strong><br><sub>Photos, a visible countdown, timed steps and sound cues keep the routine moving without watching the clock.</sub></p>
+    </td>
+  </tr>
+  <tr>
     <td width="50%">
       <img src="docs/screenshots/breathing.png" alt="Guided breathing">
       <p align="center"><strong>Guided breathing</strong><br><sub>Three gentle rhythms with visual pacing and no required breath holds.</sub></p>
@@ -74,15 +80,19 @@ workflow:
     </td>
   </tr>
   <tr>
-    <td colspan="2">
+    <td width="50%">
       <img src="docs/screenshots/settings.png" alt="Zdorovo settings">
       <p align="center"><strong>Your routine, your rules</strong><br><sub>Every activity can be tuned independently, with three accent palettes and light, dark or scheduled appearance.</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/overview-burgundy-dark.png" alt="Zdorovo in the dark burgundy theme">
+      <p align="center"><strong>Made to fit the desktop</strong><br><sub>Teal, burgundy and gray accents each work in light and dark mode.</sub></p>
     </td>
   </tr>
 </table>
 
-The screenshots use a generated demo profile. No personal usage or wellbeing
-data is included in this repository.
+The screenshots are generated from a disposable demo profile. No personal
+usage or wellbeing data is included in this repository.
 
 ## What it tracks
 

@@ -32,6 +32,7 @@ import healthbreak  # noqa: E402
 
 CAPTURES = (
     ("overview", "today", False),
+    ("exercise", "exercise", True),
     ("achievements", "achievements", True),
     ("breathing", "breathing", False),
     ("analytics", "analytics", True),
@@ -155,6 +156,31 @@ def save_window(window: Gtk.Window, path: Path) -> None:
         renderer.unrealize()
 
 
+def exercise_payload(app: healthbreak.ZdorovoApplication) -> dict[str, object]:
+    meta = app.scheduler._reminder_content("general")
+    duration = int(app.config.reminder("general")["duration_seconds"])
+    steps = list(meta["steps"])
+    return {
+        "id": "readme-exercise",
+        "kind": "general",
+        "combined": ["general"],
+        "title": meta["title"],
+        "eyebrow": (
+            f"Custom duration · {healthbreak.format_precise_duration(duration, 'en')}"
+            if app.config.data.get("language") == "en"
+            else f"Настроенная длительность · {healthbreak.format_precise_duration(duration, 'ru')}"
+        ),
+        "icon": meta["icon"],
+        "steps": steps,
+        "note": meta["note"],
+        "image": meta.get("image"),
+        "duration_seconds": duration,
+        "step_seconds": healthbreak.guided_step_seconds(duration, len(steps), meta.get("step_seconds")),
+        "variant_index": int(meta.get("variant_index", 0)),
+        "created_at": time.time(),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--page", choices=[name for name, _page, _dark in CAPTURES])
@@ -208,16 +234,23 @@ def main() -> int:
             self.set_size_request(args.width, args.height)
             self.set_default_size(args.width, args.height)
 
+    base_overlay = healthbreak.FallbackOverlay
+
+    class CaptureOverlay(base_overlay):
+        def fullscreen(self) -> None:
+            self.set_default_size(args.width, args.height)
+
     healthbreak.MainWindow = CaptureWindow
+    healthbreak.FallbackOverlay = CaptureOverlay
     app = healthbreak.ZdorovoApplication()
     seed_demo(app, args.language, args.color_theme)
     state = {"index": 0}
 
     def capture_current() -> bool:
+        name, page, _dark = captures[state["index"]]
         window = app.window
         if window is None:
             return GLib.SOURCE_REMOVE
-        name, _page, _dark = captures[state["index"]]
         suffix = "" if args.language == "en" else f"-{args.language}"
         if args.color_theme != "teal":
             suffix += f"-{args.color_theme}"
@@ -245,6 +278,42 @@ def main() -> int:
         app.apply_color_scheme()
         window.add_css_class("dark-mode") if dark else window.remove_css_class("dark-mode")
         window.backdrop.set_dark(dark)
+        if page == "exercise":
+            exercise = healthbreak.FallbackOverlay(app, exercise_payload(app))
+            stage = exercise.get_child()
+            if stage is None:
+                raise RuntimeError("exercise overlay has no content")
+            exercise.set_child(None)
+            stage.set_size_request(args.width, args.height)
+            window.set_content(stage)
+            window.set_decorated(False)
+            window.add_css_class("break-window")
+            if dark:
+                window.add_css_class("break-dark")
+            window.present()
+            state["exercise_widget"] = exercise
+
+            def start_then_capture() -> bool:
+                exercise = state.get("exercise_widget")
+                if exercise is None:
+                    return GLib.SOURCE_REMOVE
+                exercise.started = True
+                exercise.elapsed = min(12.0, exercise.duration_seconds / 4)
+                exercise.running = True
+                exercise.run_started = time.monotonic()
+                exercise.snooze_button.set_visible(False)
+                exercise.pause_button.set_visible(True)
+                exercise._set_button(
+                    exercise.primary_button,
+                    "object-select-symbolic",
+                    exercise._t("Завершить"),
+                )
+                exercise._timer_tick()
+                GLib.timeout_add(500, capture_current)
+                return GLib.SOURCE_REMOVE
+
+            GLib.timeout_add(800, start_then_capture)
+            return GLib.SOURCE_REMOVE
         window.stack.set_visible_child_name(page)
         window.refresh(rebuild_lists=True)
         window.present()
