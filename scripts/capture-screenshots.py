@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -35,9 +36,13 @@ CAPTURES = (
     ("exercise", "exercise", True),
     ("achievements", "achievements", True),
     ("breathing", "breathing", False),
+    ("training", "training", False),
+    ("training-course", "training", True),
+    ("training-session", "training", True),
     ("analytics", "analytics", True),
     ("habits", "habits", False),
     ("settings", "settings", True),
+    ("important", "health", False),
 )
 
 
@@ -242,13 +247,22 @@ def main() -> int:
 
     healthbreak.MainWindow = CaptureWindow
     healthbreak.FallbackOverlay = CaptureOverlay
+    base_training_overlay = healthbreak.TrainingSessionOverlay
+
+    class CaptureTrainingOverlay(base_training_overlay):
+        def __init__(self, *overlay_args: object, **overlay_kwargs: object) -> None:
+            super().__init__(*overlay_args, **overlay_kwargs)
+            self.set_default_size(args.width, args.height)
+            self.set_size_request(args.width, args.height)
+
+    healthbreak.TrainingSessionOverlay = CaptureTrainingOverlay
     app = healthbreak.ZdorovoApplication()
     seed_demo(app, args.language, args.color_theme)
     state = {"index": 0}
 
     def capture_current() -> bool:
         name, page, _dark = captures[state["index"]]
-        window = app.window
+        window = state.get("capture_window") or app.window
         if window is None:
             return GLib.SOURCE_REMOVE
         suffix = "" if args.language == "en" else f"-{args.language}"
@@ -270,7 +284,7 @@ def main() -> int:
         window = app.window
         if window is None:
             return GLib.SOURCE_REMOVE
-        _name, page, default_dark = captures[state["index"]]
+        name, page, default_dark = captures[state["index"]]
         dark = default_dark if args.theme == "default" else args.theme == "dark"
         window.set_visible(False)
         app.config.data["dark_mode"] = dark
@@ -278,6 +292,13 @@ def main() -> int:
         app.apply_color_scheme()
         window.add_css_class("dark-mode") if dark else window.remove_css_class("dark-mode")
         window.backdrop.set_dark(dark)
+        if name in ("training-course", "training-session") and app.db.active_training() is None:
+            started = time.time() - 3 * 86400
+            enrollment = app.db.start_training("upper_body", 30, now=started)
+            enrollment_id = int(enrollment["id"])
+            app.db.complete_training_day(enrollment_id, 1, "a", 540, now=started)
+            app.db.complete_training_day(enrollment_id, 2, "recovery", 360, now=started + 86400)
+            app.db.complete_training_day(enrollment_id, 3, "b", 620, now=started + 2 * 86400)
         if page == "exercise":
             exercise = healthbreak.FallbackOverlay(app, exercise_payload(app))
             stage = exercise.get_child()
@@ -316,6 +337,46 @@ def main() -> int:
             return GLib.SOURCE_REMOVE
         window.stack.set_visible_child_name(page)
         window.refresh(rebuild_lists=True)
+        if name == "training-course":
+            window._show_active_training()
+        elif name == "training-session":
+            enrollment = app.db.active_training()
+            if enrollment is None:
+                raise RuntimeError("training session capture needs an active course")
+            course_id = str(enrollment["course_id"])
+            weekdays = healthbreak.normalize_weekdays(
+                json.loads(str(enrollment["weekdays"])),
+                int(enrollment["days_per_week"]),
+            )
+            start_weekday = datetime.fromtimestamp(float(enrollment["started_at"])).weekday()
+            plan = None
+            for course_day in range(1, 8):
+                candidate = healthbreak.training_day(
+                    course_id,
+                    course_day,
+                    int(enrollment["duration_days"]),
+                    args.language,
+                    str(enrollment["fitness_level"]),
+                    len(weekdays),
+                    weekdays,
+                    start_weekday,
+                )
+                if candidate["exercises"]:
+                    plan = candidate
+                    break
+            if plan is None:
+                raise RuntimeError("training session capture could not find a workout day")
+            overlay = healthbreak.TrainingSessionOverlay(
+                app,
+                plan,
+                healthbreak.COURSES[course_id],
+                lambda _seconds: None,
+            )
+            overlay._advance()
+            overlay.present()
+            state["capture_window"] = overlay
+            GLib.timeout_add(700, capture_current)
+            return GLib.SOURCE_REMOVE
         window.present()
         window.queue_draw()
 

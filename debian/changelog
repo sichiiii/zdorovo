@@ -1,3 +1,13 @@
+zdorovo (0.1.7) unstable; urgency=medium
+
+  * Add five progressive, equipment-free training courses.
+  * Guide complete workouts with timed exercises, recovery and photos.
+  * Persist course plans, calendars, reminders and completed sessions.
+  * Expand movement rotation and keep combined breaks movement-focused.
+  * Improve responsive layouts, navigation and the active-course reset flow.
+
+ -- CYBERJABKA <sichiiii@users.noreply.github.com>  Fri, 17 Jul 2026 21:30:00 +0300
+
 zdorovo (0.1.6) unstable; urgency=medium
 
   * Add complete teal, burgundy and gray palettes for light and dark modes.

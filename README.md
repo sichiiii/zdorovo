@@ -8,7 +8,7 @@
 
 <p align="center">
   A calmer work rhythm for GNOME.<br>
-  Guided health breaks, breathing, habits and private screen-time analytics.
+  Guided health breaks, progressive training, breathing, habits and private screen-time analytics.
 </p>
 
 <p align="center">
@@ -44,8 +44,9 @@ workflow:
 | | |
 |---|---|
 | **Useful pauses** | Rotating routines for eye rest, movement, neck and shoulders, lower back, hands and breathing. |
+| **Courses with recovery built in** | Five distinct plans for full-body strength, arms/shoulders/back, leg strength, leg stability, and mobility/balance. Choose 7, 30, 180 or 360 days and exact weekdays; every session stays in the room and needs at most a wall, stable chair or yoga mat. |
 | **Active-work timing** | Reminder clocks advance while you use the computer; fullscreen viewing remains counted even when the pointer is still. |
-| **Guidance that finishes the job** | Each routine can include photos, timed steps, progress and sound cues. |
+| **Guidance that finishes the job** | Each routine can include illustrated steps, a visible timer, progress and sound cues. |
 | **Quiet when it matters** | Screen sharing, fullscreen activity and manual pause can suppress interruptions without stopping screen-time statistics. |
 | **A local health journal** | Daily wellbeing check-ins can be compared with screen time and completed breaks. |
 | **Progress without pressure** | Healthy habits and 56 emblems across seven eight-level achievement series. |
@@ -53,6 +54,22 @@ workflow:
 ## Inside the app
 
 <table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/training-light-scroll-620.png" alt="Training course catalogue">
+      <p align="center"><strong>Choose a sustainable course</strong><br><sub>Pick two to five exact weekdays, then match the workload to your recent training experience.</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/training-course-dark.png" alt="A training course day">
+      <p align="center"><strong>One planned day at a time</strong><br><sub>Start directly from the active plan; course history, recovery days and a month calendar keep longer plans understandable.</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <img src="docs/screenshots/training-session-dark.png" alt="A guided training session in progress">
+      <p align="center"><strong>Follow the session, not the clock</strong><br><sub>Timed exercises and recovery start automatically; repetition-based exercises wait for confirmation.</sub></p>
+    </td>
+  </tr>
   <tr>
     <td colspan="2">
       <img src="docs/screenshots/exercise.png" alt="A guided movement break in progress">
@@ -101,6 +118,7 @@ Zdorovo records the minimum needed to build useful statistics:
 - active seconds per application;
 - timestamps and outcomes of reminders;
 - guided exercise duration;
+- training-course settings, calendar progress and recorded session time;
 - habit check-ins and unlocked achievements;
 - wellbeing values entered by the user.
 
@@ -115,7 +133,7 @@ Download the current package from
 [GitHub Releases](https://github.com/sichiiii/zdorovo/releases/latest), then run:
 
 ```bash
-sudo apt install ./zdorovo_0.1.6_all.deb
+sudo apt install ./zdorovo_0.1.7_all.deb
 ```
 
 Open **Zdorovo** from the application list. Its user services start with the
@@ -178,8 +196,8 @@ All runtime data stays in the user's home directory:
 | Scheduler state | `~/.local/share/zdorovo/scheduler-state.json` |
 
 The application has no account system, telemetry endpoint or cloud service.
-Settings, analytics and achievements can be exported to one JSON backup and
-restored on another computer.
+Settings, analytics, training progress and achievements can be exported to one
+JSON backup and restored on another computer.
 
 ## Development
 

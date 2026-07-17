@@ -1,15 +1,14 @@
 [Desktop Entry]
 Name=Zdorovo
 Name[ru]=Здорово
-Comment=Health breaks, breathing and screen-time analytics
-Comment[ru]=Перерывы, дыхание и аналитика экранного времени
+Comment=Health breaks, training and screen-time analytics
+Comment[ru]=Перерывы, тренировки и аналитика экранного времени
 Exec=/usr/lib/zdorovo/launch.sh
 Icon=io.github.jabka.Zdorovo-mint-v2
 Terminal=false
 Type=Application
 Categories=Utility;GTK;
-Keywords=health;break;eyes;neck;breathing;screen time;здоровье;перерыв;дыхание;
+Keywords=health;break;eyes;neck;training;breathing;screen time;здоровье;перерыв;тренировки;дыхание;
 StartupNotify=true
 DBusActivatable=false
 X-GNOME-UsesNotifications=true
-

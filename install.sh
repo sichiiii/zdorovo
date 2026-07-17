@@ -36,6 +36,7 @@ if [[ ! -f "$HOME/.local/share/icons/hicolor/index.theme" && -f /usr/share/icons
 fi
 install -m 0755 "$ROOT/healthbreak.py" "$APP_DIR/healthbreak.py"
 install -m 0644 "$ROOT/localization.py" "$APP_DIR/localization.py"
+install -m 0644 "$ROOT/training.py" "$APP_DIR/training.py"
 install -m 0755 "$ROOT/indicator.py" "$APP_DIR/indicator.py"
 install -m 0755 "$ROOT/launch.sh" "$APP_DIR/launch.sh"
 install -m 0644 "$ROOT/assets/style.css" "$APP_DIR/assets/style.css"
@@ -46,7 +47,8 @@ rm -f "$ICON_DIR/io.github.jabka.Zdorovo-teal.svg"
 install -m 0644 "$ROOT/extension/metadata.json" "$ROOT/extension/extension.js" "$EXT_DIR/"
 rm -rf "$EXT_DIR/assets"
 rm -f "$EXT_DIR/stylesheet.css"
-for guide in "$ROOT"/assets/*-guide.png; do
+rm -f "$APP_DIR"/assets/training-*.png
+for guide in "$ROOT"/assets/*-guide.png "$ROOT"/assets/training-*.png; do
   if [[ -f "$guide" ]]; then
     install -m 0644 "$guide" "$APP_DIR/assets/"
   fi
@@ -58,14 +60,14 @@ cat > "$APPLICATIONS_DIR/io.github.jabka.Zdorovo.desktop" <<EOF
 [Desktop Entry]
 Name=Zdorovo
 Name[ru]=Здорово
-Comment=Health breaks, guided movement and screen time
-Comment[ru]=Перерывы, упражнения и экранное время
+Comment=Health breaks, training and screen time
+Comment[ru]=Перерывы, тренировки и экранное время
 Exec=$APP_DIR/launch.sh
 Icon=io.github.jabka.Zdorovo-mint-v2
 Terminal=false
 Type=Application
 Categories=Utility;GTK;
-Keywords=health;break;eyes;neck;screen time;здоровье;перерыв;
+Keywords=health;break;eyes;neck;training;screen time;здоровье;перерыв;тренировки;
 StartupNotify=true
 DBusActivatable=false
 EOF

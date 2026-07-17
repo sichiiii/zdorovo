@@ -1,10 +1,13 @@
 import importlib.util
+import json
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+
+import training as TRAINING
 
 TMP = tempfile.TemporaryDirectory()
 os.environ["ZDOROVO_CONFIG_HOME"] = str(Path(TMP.name) / "config")
@@ -34,6 +37,7 @@ class CoreTests(unittest.TestCase):
         self.assertIn("general", value["reminders"])
         self.assertTrue(value["wellness_checkin_enabled"])
         self.assertEqual(value["color_theme"], "teal")
+        self.assertFalse(value["sidebar_collapsed"])
 
     def test_accent_palettes_render_and_validate(self):
         css = "@define-color accent #327F79; border: rgba(50,127,121,0.26);"
@@ -188,6 +192,8 @@ class CoreTests(unittest.TestCase):
         self.assertIn(".range-day.range-inside { color: white; background: #327F79; }", css)
         self.assertIn(".range-day.range-start.range-end { border-radius: 8px; }", css)
         self.assertIn("responsive_page = Adw.BreakpointBin()", source)
+        self.assertIn("hscrollbar_policy=Gtk.PolicyType.NEVER", source)
+        self.assertIn("label=note, xalign=0, wrap=True", source)
         self.assertIn("scrollbar.vertical {\n  min-width: 3px;", css)
         self.assertIn("border: 1px solid rgba(50,127,121,0.26);", css)
         self.assertIn(".palette-picker button", css)
@@ -312,6 +318,8 @@ class CoreTests(unittest.TestCase):
             scheduler._maybe_show(now + 10 * 60)
             self.assertEqual(shown[0]["kind"], "general")
             self.assertEqual(shown[0]["combined"], ["general", "eyes"])
+            self.assertFalse(any(step.startswith("For the eyes:") for step in shown[0]["steps"]))
+            self.assertEqual(shown[0]["duration_seconds"], 5 * 60)
         finally:
             MODULE.pause_media_players = original_pause
             db.close()
@@ -333,7 +341,7 @@ class CoreTests(unittest.TestCase):
             db.close()
 
     def test_rotating_routines_have_variety(self):
-        expected = {"eyes": 3, "general": 6, "neck": 6, "back": 5, "wrists": 5, "breathing": 5}
+        expected = {"eyes": 3, "general": 12, "neck": 6, "back": 5, "wrists": 5, "breathing": 5}
         for kind, count in expected.items():
             variants = MODULE.REMINDER_META[kind]["variants"]
             self.assertEqual(len(variants), count, kind)
@@ -495,6 +503,8 @@ class CoreTests(unittest.TestCase):
                 "habit_events",
                 "app_notifications",
                 "achievement_unlocks",
+                "training_enrollments",
+                "training_events",
             },
         )
 
@@ -505,6 +515,315 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(restored.top_apps(7)[0]["app_name"], "Browser")
         self.assertEqual(restored.exercise_overview(7)["done"], 1)
         self.assertEqual(restored.latest_wellness()["back"], 5)
+
+    def test_training_courses_balance_work_and_recovery(self):
+        self.assertEqual(MODULE.COURSE_DURATIONS, (7, 30, 180, 360))
+        self.assertEqual(
+            set(MODULE.COURSES),
+            {"full_body", "upper_body", "legs", "lower_body", "balance"},
+        )
+        for course_id, course in MODULE.COURSES.items():
+            self.assertIn(course["icon"], MODULE.REMINDER_META, course_id)
+            for days_per_week in (2, 3, 4, 5):
+                week = [
+                    MODULE.training_day(
+                        course_id,
+                        day,
+                        7,
+                        days_per_week=days_per_week,
+                    )
+                    for day in range(1, 8)
+                ]
+                kinds = [plan["kind"] for plan in week]
+                self.assertEqual(
+                    sum(kind != "rest" for kind in kinds),
+                    days_per_week,
+                    (course_id, days_per_week),
+                )
+                self.assertEqual(kinds.count("strength"), 3 if days_per_week >= 3 else 2)
+                self.assertFalse(
+                    any(left == right == "strength" for left, right in zip(kinds, kinds[1:], strict=False)),
+                    (course_id, days_per_week),
+                )
+
+            custom_days = (1, 3, 6)
+            custom_week = MODULE.weekly_pattern(3, weekdays=custom_days)
+            self.assertEqual(
+                tuple(index for index, (kind, _session) in enumerate(custom_week) if kind != "rest"),
+                custom_days,
+                course_id,
+            )
+
+            lighter = MODULE.training_day(course_id, 28, 360)
+            self.assertTrue(lighter["lighter"], course_id)
+            self.assertLessEqual(lighter["rounds"], 2, course_id)
+            maintained = MODULE.training_day(course_id, 120, 360)
+            last = MODULE.training_day(course_id, 351, 360)
+            self.assertEqual(maintained["phase"], last["phase"], course_id)
+            self.assertTrue(
+                all(
+                    earlier["target_value"] <= later["target_value"]
+                    for earlier, later in zip(maintained["exercises"], last["exercises"], strict=True)
+                ),
+                course_id,
+            )
+
+    def test_training_levels_and_guided_stages(self):
+        beginner = MODULE.training_day("full_body", 57, 180, fitness_level="beginner")
+        regular = MODULE.training_day("full_body", 57, 180, fitness_level="regular")
+        trained = MODULE.training_day("full_body", 57, 180, fitness_level="trained")
+        advanced = MODULE.training_day("full_body", 57, 180, fitness_level="advanced")
+        self.assertEqual(len(MODULE.FITNESS_LEVELS), 4)
+        self.assertEqual(beginner["rounds"], 1)
+        self.assertLessEqual(regular["rounds"], trained["rounds"])
+        self.assertLessEqual(trained["rounds"], advanced["rounds"])
+        self.assertLessEqual(advanced["rounds"], 3)
+        self.assertLess(len(beginner["exercises"]), len(advanced["exercises"]))
+        for low, high in zip(beginner["exercises"], advanced["exercises"], strict=False):
+            self.assertLessEqual(low["target_value"], high["target_value"])
+            self.assertTrue(low["image"].startswith("training-"))
+
+        shoulder_beginner = MODULE.training_day("upper_body", 1, 30, fitness_level="beginner")
+        shoulder_regular = MODULE.training_day("upper_body", 3, 30, fitness_level="regular")
+        shoulder_trained = MODULE.training_day("upper_body", 1, 30, fitness_level="trained")
+        self.assertNotIn("chair_dip", [item["id"] for item in shoulder_beginner["exercises"]])
+        self.assertIn("floor_pushup", [item["id"] for item in shoulder_regular["exercises"]])
+        self.assertIn("chair_dip", [item["id"] for item in shoulder_trained["exercises"]])
+
+        lower_beginner = MODULE.training_day("lower_body", 1, 30, fitness_level="beginner")
+        lower_regular = MODULE.training_day("lower_body", 1, 30, fitness_level="regular")
+        self.assertNotIn(
+            "supported_split_squat",
+            [item["id"] for item in lower_beginner["exercises"]],
+        )
+        self.assertIn(
+            "supported_split_squat",
+            [item["id"] for item in lower_regular["exercises"]],
+        )
+
+        stages = MODULE.training_stages(regular)
+        exercises = [item for item in stages if item["type"] == "exercise"]
+        rests = [item for item in stages if item["type"] == "rest"]
+        self.assertEqual(len(rests), len(exercises) - 1)
+        self.assertEqual(stages[-1]["type"], "recovery")
+        self.assertTrue(any(item["timed"] for item in exercises))
+        self.assertTrue(any(not item["timed"] for item in exercises))
+
+    def test_training_runner_done_advances_timed_and_repetition_stages(self):
+        for timed in (True, False):
+            advanced = []
+            runner = SimpleNamespace(
+                completed=False,
+                running=True,
+                stage_index=0,
+                _current=lambda value=timed: {"type": "exercise", "timed": value},
+                _advance=lambda target=advanced: target.append(True),
+            )
+            MODULE.TrainingSessionOverlay._primary_clicked(runner, None)
+            self.assertEqual(advanced, [True])
+
+        paused = SimpleNamespace(
+            completed=False,
+            running=False,
+            stage_index=0,
+            _current=lambda: {"type": "exercise", "timed": True},
+            _advance=lambda: self.fail("a paused workout must not advance"),
+        )
+        MODULE.TrainingSessionOverlay._primary_clicked(paused, None)
+
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        runner_source = source.split("class TrainingSessionOverlay", 1)[1].split("class FallbackOverlay", 1)[
+            0
+        ]
+        self.assertNotIn("pause_media_players()", runner_source)
+        self.assertIn("content.set_vexpand(True)", runner_source)
+        self.assertIn("actions.set_valign(Gtk.Align.END)", runner_source)
+        self.assertIn("self.pause_button.set_size_request(170, 46)", runner_source)
+        self.assertIn("self.primary_button.set_size_request(220, 46)", runner_source)
+        self.assertIn("content_scroll.set_child(content)", runner_source)
+        self.assertNotIn("runner_scroll.set_child(clamp)", runner_source)
+
+        css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        self.assertIn(".training-active-hero-flow flowboxchild {\n  /*", css)
+        self.assertIn("min-width: 380px;", css)
+        self.assertIn(".training-days-flow flowboxchild { min-width: 84px; }", css)
+
+    def test_course_selection_returns_training_page_to_the_top(self):
+        values = []
+        adjustment = SimpleNamespace(
+            get_lower=lambda: 0.0,
+            set_value=values.append,
+        )
+        window = SimpleNamespace(training_scroller=SimpleNamespace(get_vadjustment=lambda: adjustment))
+        result = MODULE.MainWindow._scroll_training_to_top(window)
+        self.assertEqual(values, [0.0])
+        self.assertEqual(result, MODULE.GLib.SOURCE_REMOVE)
+
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertGreaterEqual(source.count("self._rebuild_active_training_at_top()"), 5)
+
+    def test_strength_days_progress_until_the_planned_lighter_week(self):
+        for course_id in MODULE.COURSES:
+            first = MODULE.training_day(course_id, 1, 180, fitness_level="regular")
+            third = MODULE.training_day(course_id, 5, 180, fitness_level="regular")
+            next_week = MODULE.training_day(course_id, 8, 180, fitness_level="regular")
+            self.assertEqual(
+                (first["build_step"], third["build_step"], next_week["build_step"]),
+                (0, 2, 3),
+                course_id,
+            )
+
+            first_targets = {
+                item["id"]: item["target_value"] for item in first["exercises"] if item["id"] != "room_warmup"
+            }
+            third_targets = {
+                item["id"]: item["target_value"] for item in third["exercises"] if item["id"] != "room_warmup"
+            }
+            for exercise_id, target in first_targets.items():
+                self.assertEqual(third_targets[exercise_id], target + 2, course_id)
+
+            first_warmup = next(item for item in first["exercises"] if item["id"] == "room_warmup")
+            third_warmup = next(item for item in third["exercises"] if item["id"] == "room_warmup")
+            self.assertEqual(first_warmup["target_value"], third_warmup["target_value"])
+
+        lighter = MODULE.training_day("full_body", 22, 180, fitness_level="regular")
+        self.assertTrue(lighter["lighter"])
+        self.assertEqual(lighter["build_step"], 0)
+
+    def test_training_uses_packaged_photos_and_no_workout_equipment(self):
+        forbidden = (
+            "bottle",
+            "dumbbell",
+            "weight plate",
+            "гантел",
+            "бутыл",
+            "walk",
+            "ходьб",
+            "пройд",
+        )
+        referenced = set()
+        for exercise_id, exercise in TRAINING.EXERCISES.items():
+            image = str(exercise["image"])
+            referenced.add(image)
+            self.assertTrue((MODULE.ROOT / "assets" / image).is_file(), exercise_id)
+            copy = " ".join(
+                str(exercise[key]).lower() for key in ("instruction_en", "instruction_ru", "cue_en", "cue_ru")
+            )
+            self.assertFalse(any(term in copy for term in forbidden), exercise_id)
+        for course_id, course in MODULE.COURSES.items():
+            image = str(course["image"])
+            referenced.add(image)
+            self.assertTrue((MODULE.ROOT / "assets" / image).is_file(), course_id)
+            equipment = f"{course['equipment_en']} {course['equipment_ru']}".lower()
+            self.assertFalse(any(term in equipment for term in forbidden), course_id)
+        self.assertGreaterEqual(len(referenced), 18)
+
+    def test_training_switch_resume_reset_and_calendar_history(self):
+        database = MODULE.UsageDatabase(Path(TMP.name) / "training-switch.sqlite3")
+        started = MODULE.time.time() - 3 * 86400
+        first = database.start_training(
+            "core",
+            30,
+            "regular",
+            3,
+            now=started,
+            weekdays=(1, 3, 6),
+        )
+        first_id = int(first["id"])
+        self.assertEqual(json.loads(first["weekdays"]), [1, 3, 6])
+        database.complete_training_day(first_id, 1, "a", 300, now=started)
+
+        database.start_training("upper_body", 7, "beginner", 2, now=started + 86400)
+        self.assertEqual(database.active_training()["course_id"], "upper_body")
+        saved_first = database.resumable_training("core")
+        self.assertIsNotNone(saved_first)
+        self.assertEqual(saved_first["current_day"], 2)
+
+        database.resume_training(first_id)
+        resumed = database.active_training()
+        self.assertEqual(resumed["course_id"], "full_body")
+        self.assertEqual(resumed["fitness_level"], "regular")
+        self.assertEqual(resumed["days_per_week"], 3)
+        self.assertEqual(json.loads(resumed["weekdays"]), [1, 3, 6])
+        updated = database.update_training_weekdays(first_id, (0, 3, 5))
+        self.assertEqual(updated["current_day"], 2)
+        self.assertEqual(updated["days_per_week"], 3)
+        self.assertEqual(json.loads(updated["weekdays"]), [0, 3, 5])
+        self.assertEqual(database.training_summary(first_id)["completed_days"], 1)
+        updated = database.update_training_plan(first_id, fitness_level="trained")
+        self.assertEqual(updated["fitness_level"], "trained")
+        self.assertEqual(updated["current_day"], 2)
+        self.assertEqual(database.training_summary(first_id)["completed_days"], 1)
+        with self.assertRaises(ValueError):
+            database.update_training_weekdays(first_id, (0,))
+        calendar_rows = database.training_calendar(
+            MODULE.datetime.fromtimestamp(started).date() - MODULE.timedelta(days=1),
+            MODULE.datetime.fromtimestamp(started).date() + MODULE.timedelta(days=1),
+        )
+        self.assertEqual(len(calendar_rows), 1)
+        self.assertEqual(calendar_rows[0]["course_id"], "full_body")
+
+        reset = database.reset_training(
+            first_id,
+            duration_days=180,
+            fitness_level="advanced",
+            weekdays=(0, 1, 3, 5),
+            now=started + 2 * 86400,
+        )
+        self.assertEqual(reset["current_day"], 1)
+        self.assertEqual(reset["duration_days"], 180)
+        self.assertEqual(reset["fitness_level"], "advanced")
+        self.assertEqual(reset["days_per_week"], 4)
+        self.assertEqual(json.loads(reset["weekdays"]), [0, 1, 3, 5])
+        self.assertEqual(database.training_summary(first_id)["completed_days"], 0)
+        self.assertEqual(database.training_history()[1]["course_id"], "upper_body")
+
+    def test_legacy_training_courses_migrate_without_losing_progress(self):
+        path = Path(TMP.name) / "training-legacy.sqlite3"
+        database = MODULE.UsageDatabase(path)
+        started = MODULE.time.time() - 86400
+        with database.conn:
+            cursor = database.conn.execute(
+                """INSERT INTO training_enrollments
+                   (course_id, duration_days, fitness_level, days_per_week, weekdays,
+                    started_at, current_day, is_active)
+                   VALUES('shoulders',30,'regular',3,'[0,2,4]',?,4,1)""",
+                (started,),
+            )
+            database.conn.execute(
+                """INSERT INTO training_events
+                   (enrollment_id, created_at, course_day, session_key, duration_seconds)
+                   VALUES(?,?,3,'a',420)""",
+                (int(cursor.lastrowid), started),
+            )
+        database.close()
+
+        migrated = MODULE.UsageDatabase(path)
+        active = migrated.active_training()
+        self.assertEqual(active["course_id"], "upper_body")
+        self.assertEqual(active["current_day"], 4)
+        self.assertEqual(migrated.training_summary(int(active["id"]))["completed_days"], 1)
+
+    def test_training_progress_is_daily_and_survives_backup(self):
+        source = MODULE.UsageDatabase(Path(TMP.name) / "training-source.sqlite3")
+        now = MODULE.time.time()
+        enrollment = source.start_training("full_body", 30, now=now)
+        enrollment_id = int(enrollment["id"])
+        self.assertEqual(source.active_training()["current_day"], 1)
+        self.assertFalse(source.complete_training_day(enrollment_id, 1, "a", 420, now=now))
+        self.assertFalse(source.training_available_today(enrollment_id, now=now))
+        with self.assertRaises(ValueError):
+            source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 60)
+        self.assertFalse(source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 86400))
+        self.assertEqual(source.active_training()["current_day"], 3)
+        self.assertEqual(source.training_summary(enrollment_id)["completed_days"], 2)
+
+        restored = MODULE.UsageDatabase(Path(TMP.name) / "training-restored.sqlite3")
+        restored.restore_tables(source.backup_tables())
+        self.assertEqual(restored.active_training()["course_id"], "full_body")
+        self.assertEqual(restored.active_training()["current_day"], 3)
+        self.assertEqual(restored.active_training()["weekdays"], "[0,2,4]")
+        self.assertEqual(restored.training_summary()["duration_seconds"], 660)
 
     def test_multilevel_achievements_unlock_once_and_restore(self):
         self.assertGreaterEqual(len(MODULE.ACHIEVEMENTS), 35)
@@ -595,6 +914,45 @@ class CoreTests(unittest.TestCase):
         db.log_habit("test-habit")
         scheduler._maybe_prompt_habits()
         self.assertEqual(prompted, ["test-habit"])
+
+    def test_training_reminders_follow_fixed_and_flexible_intervals(self):
+        config = MODULE.Config()
+        config.data["training_reminders_enabled"] = True
+        db = MODULE.UsageDatabase(Path(TMP.name) / "training_reminders.sqlite3")
+        base = MODULE.datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        today = base.weekday()
+        weekdays = tuple(sorted({today, (today + 2) % 7, (today + 4) % 7}))
+        db.start_training("full_body", 30, "beginner", weekdays=weekdays, now=base.timestamp())
+        prompts = []
+        scheduler = MODULE.Scheduler(
+            config,
+            db,
+            lambda _payload: None,
+            prompt_training=lambda enrollment, plan, count: prompts.append(
+                (int(enrollment["id"]), plan["kind"], count)
+            ),
+        )
+
+        config.data["training_reminder_time"] = "11:59"
+        scheduler.reset_training_reminders(base.timestamp() - 3600)
+        scheduler._maybe_prompt_training(base.timestamp())
+        scheduler._maybe_prompt_training(base.timestamp() + 3599)
+        scheduler._maybe_prompt_training(base.timestamp() + 3600)
+        self.assertEqual([item[2] for item in prompts], [1, 2])
+
+        prompts.clear()
+        config.data["training_reminder_time"] = None
+        scheduler.reset_training_reminders(base.timestamp())
+        scheduler._maybe_prompt_training(base.timestamp() + 8999)
+        scheduler._maybe_prompt_training(base.timestamp() + 9000)
+        scheduler._maybe_prompt_training(base.timestamp() + 17999)
+        scheduler._maybe_prompt_training(base.timestamp() + 18000)
+        self.assertEqual([item[2] for item in prompts], [1, 2])
+
+        config.data["training_reminders_enabled"] = False
+        scheduler.reset_training_reminders(base.timestamp())
+        scheduler._maybe_prompt_training(base.timestamp() + 20000)
+        self.assertEqual([item[2] for item in prompts], [1, 2])
 
     def test_backup_payload_contains_settings_and_analytics(self):
         config = MODULE.Config()
