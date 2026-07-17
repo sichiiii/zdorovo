@@ -25,9 +25,10 @@ Depends:
  libglib2.0-bin,
  systemd
 Recommends: gnome-shell (>= 46), gnome-shell-extension-appindicator, gnome-session-canberra
-Description: guided health breaks and local screen-time analytics
+Description: guided health breaks, training and local screen-time analytics
  Zdorovo schedules configurable eye, movement and posture breaks during active
- computer work. It also provides breathing sessions, habit reminders, local
- per-application screen-time analytics and wellbeing history.
+ computer work. It also provides progressive training courses, breathing
+ sessions, habit reminders, local per-application screen-time analytics and
+ wellbeing history.
  .
  All usage data stays in the user's home directory.

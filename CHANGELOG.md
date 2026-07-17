@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+## 0.1.7 — 2026-07-17
+
+- five progressive training courses for full-body strength, upper body and back, leg strength, leg stability, and mobility with balance;
+- 7-, 30-, 180- and 360-day plans with four preparation levels, exact weekday selection and planned recovery;
+- a guided workout window with exercise photos, automatic timers, recovery stages and explicit completion for repetition work;
+- persistent course progress, calendar history, resumable plans, confirmed reset controls and backup support;
+- optional workout reminders at a fixed time or on a flexible two-and-a-half-hour interval;
+- strength targets that build across training days and deliberately ease every fourth week;
+- in-room routines using only a wall, stable chair or yoga mat, including push-ups and supported chair dips at suitable levels;
+- twelve rotating General movement routines, with combined posture breaks kept free of eye instructions;
+- a smoothly collapsible navigation sidebar and more reliable card layouts at compact window sizes;
+- stable workout controls at the lower right and responsive active-course content after a progress reset.
+
 ## 0.1.6 — 2026-07-16
 
 - three complete accent palettes: teal, burgundy and gray;

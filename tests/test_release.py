@@ -27,6 +27,23 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertIn("python3-gi-cairo", control)
         self.assertIn("gir1.2-ayatanaappindicator3-0.1", control)
 
+    def test_training_module_is_packaged(self):
+        self.assertIn("training.py usr/lib/zdorovo", (ROOT / "debian" / "install").read_text())
+        installer = (ROOT / "install.sh").read_text()
+        self.assertIn("training.py", installer)
+        self.assertIn("assets/training-*.png", installer)
+        for name in (
+            "eyes-guide.png",
+            "general-guide.png",
+            "neck-guide.png",
+            "back-guide.png",
+            "wrists-guide.png",
+            "breathing-guide.png",
+            "water-guide.png",
+            "drops-guide.png",
+        ):
+            self.assertTrue((ROOT / "assets" / name).is_file(), name)
+
     def test_cyberjabka_credit_is_present(self):
         website = "https://cyberjabka.by/"
         self.assertIn(website, (ROOT / "healthbreak.py").read_text())
