@@ -1,3 +1,14 @@
+zdorovo (0.1.8) unstable; urgency=medium
+
+  * Replace the course catalogue with a guided plan questionnaire.
+  * Return directly to a fresh workout after changing or resetting a plan.
+  * Keep native window and notification controls visible during workouts.
+  * Allow intentional early progression with recovery-day confirmation.
+  * Add Back navigation to the previous guided exercise.
+  * Refine active-course spacing and sidebar grouping.
+
+ -- CYBERJABKA <sichiiii@users.noreply.github.com>  Sat, 18 Jul 2026 13:35:00 +0300
+
 zdorovo (0.1.7) unstable; urgency=medium
 
   * Add five progressive, equipment-free training courses.

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.1.8 — 2026-07-18
+
+- a guided six-step plan finder now chooses one course from the user's goal, preferred approach, weekly schedule, preparation level and course length;
+- resetting or changing a course returns directly to the new active plan, starts it with a workout day and restores the page at the top;
+- the active-course card keeps progress and actions aligned to its lower edge without reserving unused height;
+- guided workouts now run inside the main application window, leaving notifications and native window controls available throughout the session;
+- a completed day can be followed early when intentionally requested, with an explicit confirmation before bypassing a planned recovery day;
+- a Back control returns to the preceding exercise and restarts its timer without stepping through recovery screens;
+- the navigation sidebar uses quiet separators to group daily tools, progress, analytics and application settings;
+- screenshot capture now exercises the embedded workout runner and verifies that closing it restores the main application content.
+
 ## 0.1.7 — 2026-07-17
 
 - five progressive training courses for full-body strength, upper body and back, leg strength, leg stability, and mobility with balance;

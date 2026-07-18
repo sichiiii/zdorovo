@@ -588,6 +588,11 @@ def strength_build_step(
     block_start = (week // 4) * 28 + 1
     completed_strength = 0
     for previous_day in range(block_start, day):
+        # Starting or resetting a course always opens with session A, even
+        # when the current weekday is outside the recurring weekly plan.
+        if previous_day == 1:
+            completed_strength += 1
+            continue
         previous_week = (previous_day - 1) // 7
         previous_slot = (previous_day - 1) % 7
         kind, _session = weekly_pattern(
@@ -685,6 +690,8 @@ def training_day(
         selected_weekdays,
         start_weekday,
     )[slot]
+    if day == 1:
+        kind, session_key = "strength", "a"
     build_step = (
         strength_build_step(day, len(selected_weekdays), selected_weekdays, start_weekday)
         if kind == "strength" and not lighter

@@ -273,6 +273,12 @@ def main() -> int:
         if args.scroll > 0:
             suffix += f"-scroll-{int(args.scroll)}"
         save_window(window, output_dir / f"{name}{suffix}.png")
+        if name == "training-session":
+            runner = getattr(window, "training_overlay", None)
+            if runner is not None:
+                runner._close_runner()
+            if window.toolbar_view.get_content() is not window.main_content_canvas:
+                raise RuntimeError("training runner did not restore the main window content")
         state["index"] += 1
         if state["index"] >= len(captures):
             app.quit()
@@ -366,15 +372,15 @@ def main() -> int:
                     break
             if plan is None:
                 raise RuntimeError("training session capture could not find a workout day")
-            overlay = healthbreak.TrainingSessionOverlay(
-                app,
-                plan,
-                healthbreak.COURSES[course_id],
-                lambda _seconds: None,
-            )
+            window.training_active_plan = plan
+            window.training_active_enrollment = int(enrollment["id"])
+            window.training_available = True
+            window._launch_training_session(None)
+            overlay = window.training_overlay
             overlay._advance()
-            overlay.present()
-            state["capture_window"] = overlay
+            state["capture_window"] = window
+            window.present()
+            window.queue_draw()
             GLib.timeout_add(700, capture_current)
             return GLib.SOURCE_REMOVE
         window.present()

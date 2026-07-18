@@ -640,13 +640,66 @@ class CoreTests(unittest.TestCase):
         self.assertIn("actions.set_valign(Gtk.Align.END)", runner_source)
         self.assertIn("self.pause_button.set_size_request(170, 46)", runner_source)
         self.assertIn("self.primary_button.set_size_request(220, 46)", runner_source)
+        self.assertIn("self.back_button.set_size_request(140, 46)", runner_source)
+        self.assertIn('"Back" if self.language == "en" else "Назад"', runner_source)
         self.assertIn("content_scroll.set_child(content)", runner_source)
         self.assertNotIn("runner_scroll.set_child(clamp)", runner_source)
+        self.assertIn('stage.add_css_class("break-dark")', runner_source)
+
+        main_source = source.split("class MainWindow", 1)[1].split("class TrainingSessionOverlay", 1)[0]
+        launch_source = main_source.split("def _launch_training_session", 1)[1].split(
+            "def _training_overlay_closed", 1
+        )[0]
+        self.assertIn("self.toolbar_view.set_content(runner_stage)", launch_source)
+        self.assertNotIn("overlay.present()", launch_source)
+        self.assertIn("self.toolbar_view.set_content(self.main_content_canvas)", main_source)
 
         css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
-        self.assertIn(".training-active-hero-flow flowboxchild {\n  /*", css)
-        self.assertIn("min-width: 380px;", css)
+        self.assertIn(".training-active-hero-layout { min-width: 0; }", css)
+        self.assertIn(".training-active-details { min-width: 290px; }", css)
+        self.assertIn('Adw.BreakpointCondition.parse("max-width: 760sp")', source)
+        self.assertIn('Gtk.Box(vexpand=True, css_classes=["training-active-spacer"])', source)
         self.assertIn(".training-days-flow flowboxchild { min-width: 84px; }", css)
+
+        runner = SimpleNamespace(
+            stage_index=4,
+            stages=[
+                {"type": "exercise"},
+                {"type": "rest"},
+                {"type": "exercise"},
+                {"type": "rest"},
+                {"type": "exercise"},
+            ],
+        )
+        self.assertEqual(MODULE.TrainingSessionOverlay._previous_exercise_index(runner), 2)
+        runner.stage_index = 3
+        self.assertEqual(MODULE.TrainingSessionOverlay._previous_exercise_index(runner), 2)
+        runner.stage_index = 0
+        self.assertIsNone(MODULE.TrainingSessionOverlay._previous_exercise_index(runner))
+
+        rendered = []
+        application = SimpleNamespace(config=SimpleNamespace(data={}))
+        rest_runner = SimpleNamespace(
+            completed=False,
+            stage_index=1,
+            stages=[
+                {"type": "exercise", "duration_seconds": 45},
+                {"type": "rest", "duration_seconds": 20},
+            ],
+            _previous_exercise_index=lambda: 0,
+            get_application=lambda: application,
+            _render_stage=lambda: rendered.append(True),
+        )
+        original_sound = MODULE.play_guidance_sound
+        MODULE.play_guidance_sound = lambda *_args: None
+        try:
+            MODULE.TrainingSessionOverlay._go_back(rest_runner, None)
+        finally:
+            MODULE.play_guidance_sound = original_sound
+        self.assertEqual(rest_runner.stage_index, 0)
+        self.assertEqual(rest_runner.stage_remaining, 45.0)
+        self.assertEqual(rest_runner.stage_duration, 45.0)
+        self.assertEqual(rendered, [True])
 
     def test_course_selection_returns_training_page_to_the_top(self):
         values = []
@@ -661,6 +714,109 @@ class CoreTests(unittest.TestCase):
 
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
         self.assertGreaterEqual(source.count("self._rebuild_active_training_at_top()"), 5)
+        self.assertIn("GLib.idle_add(self._finish_opening_active_training)", source)
+        self.assertIn("self.training_scroller = page.get_child()", source)
+
+    def test_unavailable_training_day_can_be_opened_early(self):
+        calls = []
+        window = SimpleNamespace(
+            training_active_plan={"kind": "strength"},
+            training_active_enrollment=7,
+            training_available=False,
+            _continue_training_day_early=lambda button: calls.append(button),
+        )
+        button = object()
+        MODULE.MainWindow._activate_training_day(window, button)
+        self.assertEqual(calls, [button])
+
+        rest_calls = []
+        rest_window = SimpleNamespace(
+            training_active_plan={"kind": "rest"},
+            _complete_training_session=lambda button, **kwargs: rest_calls.append((button, kwargs)),
+            _launch_training_session=lambda *_args, **_kwargs: self.fail("rest must not launch a runner"),
+        )
+        MODULE.MainWindow._continue_training_day_early(rest_window, button)
+        self.assertEqual(rest_calls, [(button, {"allow_same_day": True})])
+
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn('"Recovery is scheduled"', source)
+        self.assertIn('"Continue today"', source)
+
+    def test_training_setup_uses_answers_to_recommend_one_course(self):
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn('self.training_setup_step = 0', source)
+        self.assertIn('self.training_view = "active" if active_training else "setup"', source)
+        self.assertIn('self._training_answer_options(', source)
+        self.assertIn('recommendation = self._training_recommendation_card()', source)
+        self.assertIn('"Your recommended plan"', source)
+        self.assertNotIn('training_course_choice_buttons', source)
+        self.assertNotIn('"Choose one course"', source)
+        self.assertIn('label="Change course" if self.language == "en" else "Сменить курс"', source)
+        self.assertIn('self._training_setup_progress()', source)
+        self.assertIn('css_classes=["card", "training-setup-shell"]', source)
+        self.assertIn('css_classes=["training-setup-progress-bar"]', source)
+        self.assertNotIn("training-setup-progress-item", source)
+
+        answers = SimpleNamespace(training_goal_choice="balanced", training_style_choice="steady")
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "full_body")
+        answers.training_goal_choice = "upper"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "upper_body")
+        answers.training_goal_choice = "mobility"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "balance")
+        answers.training_goal_choice = "lower"
+        answers.training_style_choice = "gentle"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "legs")
+        answers.training_style_choice = "strength"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "lower_body")
+
+        opened = []
+        started = []
+        window = SimpleNamespace(
+            app=SimpleNamespace(db=SimpleNamespace(active_training=lambda: {"course_id": "full_body"})),
+            training_course_choice="full_body",
+            _rebuild_active_training_at_top=lambda: opened.append(True),
+            _start_training_course=lambda _button, course_id: started.append(course_id),
+        )
+        MODULE.MainWindow._finish_training_setup(window, None)
+        self.assertEqual(opened, [True])
+        self.assertEqual(started, [])
+
+        window.training_course_choice = "upper_body"
+        MODULE.MainWindow._finish_training_setup(window, None)
+        self.assertEqual(started, ["upper_body"])
+
+    def test_training_reset_reopens_active_course_after_dialog_settles(self):
+        rebuilds = []
+        scrolls = []
+
+        class Stack:
+            visible = "training"
+
+            def get_visible_child_name(self):
+                return self.visible
+
+            def set_visible_child_name(self, name):
+                self.visible = name
+
+        window = SimpleNamespace(
+            app=SimpleNamespace(db=SimpleNamespace(active_training=lambda: object())),
+            stack=Stack(),
+            training_view="catalog",
+            _rebuild_training=lambda: rebuilds.append("active"),
+            _scroll_training_to_top=lambda: scrolls.append(0),
+        )
+        result = MODULE.MainWindow._finish_opening_active_training(window)
+        self.assertEqual(window.training_view, "active")
+        self.assertEqual(window.stack.visible, "training")
+        self.assertEqual(rebuilds, ["active"])
+        self.assertEqual(scrolls, [0])
+        self.assertEqual(result, MODULE.GLib.SOURCE_REMOVE)
+
+    def test_sidebar_navigation_has_group_dividers(self):
+        css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        self.assertIn(".sidebar stacksidebar row:nth-child(2)", css)
+        self.assertIn(".sidebar stacksidebar row:nth-child(5)", css)
+        self.assertIn(".sidebar stacksidebar row:nth-child(7)", css)
 
     def test_strength_days_progress_until_the_planned_lighter_week(self):
         for course_id in MODULE.COURSES:
@@ -689,6 +845,31 @@ class CoreTests(unittest.TestCase):
         lighter = MODULE.training_day("full_body", 22, 180, fitness_level="regular")
         self.assertTrue(lighter["lighter"])
         self.assertEqual(lighter["build_step"], 0)
+
+    def test_new_or_reset_course_starts_with_a_workout_on_an_off_day(self):
+        saturday = MODULE.datetime(2026, 7, 18, 12, 0)
+        database = MODULE.UsageDatabase(Path(TMP.name) / "training-reset-start.sqlite3")
+        enrollment = database.start_training(
+            "full_body",
+            30,
+            "beginner",
+            weekdays=(0, 2, 4),
+            now=saturday.timestamp(),
+        )
+        reset = database.reset_training(int(enrollment["id"]), now=saturday.timestamp())
+        plan = MODULE.training_day(
+            str(reset["course_id"]),
+            int(reset["current_day"]),
+            int(reset["duration_days"]),
+            "en",
+            str(reset["fitness_level"]),
+            int(reset["days_per_week"]),
+            json.loads(str(reset["weekdays"])),
+            saturday.weekday(),
+        )
+        self.assertEqual(plan["kind"], "strength")
+        self.assertEqual(plan["session_key"], "a")
+        self.assertTrue(plan["exercises"])
 
     def test_training_uses_packaged_photos_and_no_workout_equipment(self):
         forbidden = (
@@ -814,6 +995,21 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(source.training_available_today(enrollment_id, now=now))
         with self.assertRaises(ValueError):
             source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 60)
+        self.assertTrue(source.training_workout_completed_today(enrollment_id, now=now + 60))
+        self.assertFalse(
+            source.complete_training_day(
+                enrollment_id,
+                2,
+                "recovery",
+                0,
+                now=now + 60,
+                allow_same_day=True,
+            )
+        )
+        self.assertEqual(source.active_training()["current_day"], 3)
+        source.reset_training(enrollment_id, now=now)
+        self.assertFalse(source.training_workout_completed_today(enrollment_id, now=now + 60))
+        self.assertFalse(source.complete_training_day(enrollment_id, 1, "a", 420, now=now))
         self.assertFalse(source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 86400))
         self.assertEqual(source.active_training()["current_day"], 3)
         self.assertEqual(source.training_summary(enrollment_id)["completed_days"], 2)
