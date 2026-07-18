@@ -644,8 +644,9 @@ class CoreTests(unittest.TestCase):
         self.assertNotIn("runner_scroll.set_child(clamp)", runner_source)
 
         css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
-        self.assertIn(".training-active-hero-flow flowboxchild {\n  /*", css)
-        self.assertIn("min-width: 380px;", css)
+        self.assertIn(".training-active-hero-layout { min-width: 0; }", css)
+        self.assertIn(".training-active-details { min-width: 290px; }", css)
+        self.assertIn('Adw.BreakpointCondition.parse("max-width: 760sp")', source)
         self.assertIn(".training-days-flow flowboxchild { min-width: 84px; }", css)
 
     def test_course_selection_returns_training_page_to_the_top(self):
@@ -675,6 +676,9 @@ class CoreTests(unittest.TestCase):
         self.assertNotIn('"Choose one course"', source)
         self.assertIn('label="Change course" if self.language == "en" else "Сменить курс"', source)
         self.assertIn('self._training_setup_progress()', source)
+        self.assertIn('css_classes=["card", "training-setup-shell"]', source)
+        self.assertIn('css_classes=["training-setup-progress-bar"]', source)
+        self.assertNotIn("training-setup-progress-item", source)
 
         answers = SimpleNamespace(training_goal_choice="balanced", training_style_choice="steady")
         self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "full_body")

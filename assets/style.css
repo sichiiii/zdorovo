@@ -946,30 +946,37 @@ scrollbar.horizontal slider {
 }
 
 /* Training courses */
-.training-setup-head { padding: 15px 16px; }
-.training-setup-progress { min-width: 0; }
-.training-setup-progress-item {
-  min-height: 52px;
-  padding: 7px 5px;
-  color: #77738d;
-  background: rgba(255,255,255,0.36);
-  border: 1px solid rgba(50,127,121,0.09);
-  border-radius: 9px;
+.training-setup-shell { padding: 16px; }
+.training-setup-head { padding: 0 0 2px; }
+.training-setup-progress {
+  min-width: 0;
+  padding-bottom: 3px;
 }
-.training-setup-progress-item.complete {
+.training-setup-step-count {
   color: #327F79;
-  background: rgba(50,127,121,0.08);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.1px;
 }
-.training-setup-progress-item.current {
-  color: white;
+.training-setup-step-name { color: #37334b; font-size: 13px; font-weight: 820; }
+.training-setup-next { color: #77738d; font-size: 12px; font-weight: 670; }
+.training-setup-progress-bar trough {
+  min-height: 4px;
+  background: rgba(50,127,121,0.11);
+  border-radius: 99px;
+}
+.training-setup-progress-bar progress {
+  min-height: 4px;
   background: #327F79;
-  border-color: #327F79;
+  border-radius: 99px;
 }
-.training-setup-progress-number { font-size: 15px; font-weight: 850; }
-.training-setup-progress-label { font-size: 11px; font-weight: 720; }
 .training-setup-question { font-size: 19px; }
 .training-setup-copy { font-size: 13px; }
-.training-setup-actions { margin-top: 0; }
+.training-setup-actions {
+  margin-top: 0;
+  padding-top: 2px;
+  border-top: 1px solid rgba(50,127,121,0.10);
+}
 .training-setup-primary { min-width: 170px; }
 .training-answer-options,
 .training-recommendation-facts { background: transparent; }
@@ -1001,7 +1008,7 @@ scrollbar.horizontal slider {
   border: 2px solid #327F79;
   box-shadow: inset 0 1px rgba(255,255,255,0.55);
 }
-.training-recommendation-card { padding: 14px; }
+.training-recommendation-card { padding: 0; }
 .training-recommendation-title {
   color: #2b2941;
   font-size: 22px;
@@ -1038,8 +1045,8 @@ scrollbar.horizontal slider {
   border: 1px solid rgba(255,255,255,0.88);
   border-radius: 9px;
 }
-.training-duration-card { padding: 13px 15px; }
-.training-plan-builder { padding: 16px; }
+.training-duration-card { padding: 0; }
+.training-plan-builder { padding: 0; }
 .training-duration-options { min-width: 0; }
 .training-duration-button {
   min-height: 36px;
@@ -1225,15 +1232,8 @@ scrollbar.horizontal slider {
   border-radius: 16px;
   box-shadow: 0 17px 40px rgba(38,91,86,0.20);
 }
-.training-active-hero-flow flowboxchild {
-  /* The Russian action labels need a little more room than the generic
-     two-column cards. Wrap before either half can force horizontal overflow. */
-  min-width: 380px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
+.training-active-hero-layout { min-width: 0; }
+.training-active-details { min-width: 290px; }
 .training-kicker {
   color: #C5EBE7;
   font-size: 9px;
@@ -1964,20 +1964,12 @@ button.training-calendar-day:hover {
   background: rgba(255,255,255,0.065);
   border-color: rgba(255,255,255,0.10);
 }
-.dark-mode .training-setup-progress-item {
-  color: #aaa0a4;
-  background: rgba(255,255,255,0.035);
-  border-color: rgba(255,255,255,0.07);
-}
-.dark-mode .training-setup-progress-item.complete {
-  color: #9ED8D2;
-  background: rgba(50,127,121,0.12);
-}
-.dark-mode .training-setup-progress-item.current {
-  color: white;
-  background: #327F79;
-  border-color: #327F79;
-}
+.dark-mode .training-setup-actions { border-color: rgba(255,255,255,0.08); }
+.dark-mode .training-setup-step-count { color: #9ED8D2; }
+.dark-mode .training-setup-step-name { color: #eee7ea; }
+.dark-mode .training-setup-next { color: #aaa0a4; }
+.dark-mode .training-setup-progress-bar trough { background: rgba(255,255,255,0.09); }
+.dark-mode .training-setup-progress-bar progress { background: #9ED8D2; }
 .dark-mode .training-answer-button {
   color: #e5dde0;
   background: rgba(255,255,255,0.045);

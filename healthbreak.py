@@ -4970,6 +4970,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _build_training(self) -> Gtk.Widget:
         page, content = self._page()
+        self.training_page_breakpoint = self._building_page_breakpoint
+        self.training_page_breakpoint.set_condition(
+            Adw.BreakpointCondition.parse("max-width: 760sp")
+        )
         self.training_scroller = page.get_child()
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.training_page_title = Gtk.Label(xalign=0, css_classes=["page-title"])
@@ -4986,6 +4990,14 @@ class MainWindow(Adw.ApplicationWindow):
         self._rebuild_training()
         return page
 
+    def _stack_training_when_compact(self, box: Gtk.Box) -> Gtk.Box:
+        self.training_page_breakpoint.add_setter(
+            box,
+            "orientation",
+            Gtk.Orientation.VERTICAL,
+        )
+        return box
+
     def _training_course_visual(
         self,
         course: dict[str, Any],
@@ -4996,6 +5008,7 @@ class MainWindow(Adw.ApplicationWindow):
         visual = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=9,
+            hexpand=True,
             css_classes=[
                 "training-course-visual",
                 "training-active-visual" if active else "training-catalog-visual",
@@ -5252,35 +5265,50 @@ class MainWindow(Adw.ApplicationWindow):
             else ("Цель", "Подход", "Расписание", "Уровень", "Срок", "План")
         )
         progress = Gtk.Box(
-            spacing=6,
-            homogeneous=True,
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=7,
             css_classes=["training-setup-progress"],
         )
-        for index, title in enumerate(titles):
-            item = Gtk.Box(
-                orientation=Gtk.Orientation.VERTICAL,
-                spacing=4,
-                css_classes=["training-setup-progress-item"],
+        head = Gtk.Box(spacing=8)
+        head.append(
+            Gtk.Label(
+                label=(
+                    f"STEP {self.training_setup_step + 1} OF {len(titles)}"
+                    if self.language == "en"
+                    else f"ШАГ {self.training_setup_step + 1} ИЗ {len(titles)}"
+                ),
+                css_classes=["training-setup-step-count"],
             )
-            if index < self.training_setup_step:
-                item.add_css_class("complete")
-            elif index == self.training_setup_step:
-                item.add_css_class("current")
-            item.append(
-                Gtk.Label(
-                    label=str(index + 1),
-                    css_classes=["training-setup-progress-number"],
-                )
+        )
+        head.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
+        head.append(
+            Gtk.Label(
+                label=titles[self.training_setup_step],
+                css_classes=["training-setup-step-name"],
             )
-            item.append(
-                Gtk.Label(
-                    label=title,
-                    wrap=True,
-                    justify=Gtk.Justification.CENTER,
-                    css_classes=["training-setup-progress-label"],
-                )
+        )
+        head.append(Gtk.Box(hexpand=True))
+        head.append(
+            Gtk.Label(
+                label=(
+                    f"Next: {titles[self.training_setup_step + 1]}"
+                    if self.training_setup_step + 1 < len(titles) and self.language == "en"
+                    else f"Далее: {titles[self.training_setup_step + 1]}"
+                    if self.training_setup_step + 1 < len(titles)
+                    else "Ready to start"
+                    if self.language == "en"
+                    else "Можно начинать"
+                ),
+                css_classes=["training-setup-next"],
             )
-            progress.append(item)
+        )
+        progress.append(head)
+        progress.append(
+            Gtk.ProgressBar(
+                fraction=(self.training_setup_step + 1) / len(titles),
+                css_classes=["training-setup-progress-bar"],
+            )
+        )
         return progress
 
     def _recommended_training_course(self) -> str:
@@ -5373,7 +5401,7 @@ class MainWindow(Adw.ApplicationWindow):
         card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=12,
-            css_classes=["card", "training-recommendation-card"],
+            css_classes=["training-recommendation-card"],
         )
         card.append(
             self._training_course_visual(
@@ -5561,10 +5589,15 @@ class MainWindow(Adw.ApplicationWindow):
                 "Посмотрите, почему план подходит под ваши ответы, и начните сегодняшнюю тренировку.",
             )
         )
+        setup_shell = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=14,
+            css_classes=["card", "training-setup-shell"],
+        )
         setup_head = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
-            spacing=11,
-            css_classes=["card", "training-setup-head"],
+            spacing=10,
+            css_classes=["training-setup-head"],
         )
         setup_head.append(self._training_setup_progress())
         question = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -5585,7 +5618,7 @@ class MainWindow(Adw.ApplicationWindow):
             )
         )
         setup_head.append(question)
-        self.training_body.append(setup_head)
+        setup_shell.append(setup_head)
 
         goal_options = (
             (
@@ -5640,7 +5673,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._training_goal_selected,
         )
         goals.set_visible(step == 0)
-        self.training_body.append(goals)
+        setup_shell.append(goals)
 
         style_options = (
             (
@@ -5685,12 +5718,12 @@ class MainWindow(Adw.ApplicationWindow):
             self._training_style_selected,
         )
         styles.set_visible(step == 1)
-        self.training_body.append(styles)
+        setup_shell.append(styles)
 
         duration_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=13,
-            css_classes=["card", "training-duration-card", "training-plan-builder"],
+            css_classes=["training-duration-card", "training-plan-builder"],
         )
         duration_card.set_visible(step in (2, 3, 4))
         duration_copy = Gtk.Box(
@@ -5861,16 +5894,17 @@ class MainWindow(Adw.ApplicationWindow):
         reminder_settings = self._training_reminder_settings()
         reminder_settings.set_visible(step == 4)
         duration_card.append(reminder_settings)
-        self.training_body.append(duration_card)
+        setup_shell.append(duration_card)
 
         recommendation = self._training_recommendation_card()
         recommendation.set_visible(step == 5)
-        self.training_body.append(recommendation)
+        setup_shell.append(recommendation)
         safety = self._training_safety_card()
         safety.set_visible(step == 5)
-        self.training_body.append(safety)
+        setup_shell.append(safety)
 
-        self.training_body.append(self._training_setup_actions())
+        setup_shell.append(self._training_setup_actions())
+        self.training_body.append(setup_shell)
 
     def _training_calendar_card(self) -> Gtk.Widget:
         card = Gtk.Box(
@@ -6594,8 +6628,13 @@ class MainWindow(Adw.ApplicationWindow):
         back.connect("clicked", self._show_training_catalog)
         self.training_body.append(back)
 
-        hero = self._responsive_flow("training-active-hero-flow", columns=2, spacing=18)
-        hero.add_css_class("training-active-hero")
+        hero = self._stack_training_when_compact(
+            Gtk.Box(
+                spacing=18,
+                hexpand=True,
+                css_classes=["training-active-hero", "training-active-hero-layout"],
+            )
+        )
         hero.append(
             self._training_course_visual(
                 course,
@@ -6604,7 +6643,13 @@ class MainWindow(Adw.ApplicationWindow):
                 weekdays=weekdays,
             )
         )
-        hero_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9, hexpand=True)
+        hero_copy = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=9,
+            hexpand=True,
+            valign=Gtk.Align.CENTER,
+            css_classes=["training-active-details"],
+        )
         hero_copy.append(
             Gtk.Label(
                 label="ACTIVE COURSE" if self.language == "en" else "АКТИВНЫЙ КУРС",
@@ -6691,7 +6736,7 @@ class MainWindow(Adw.ApplicationWindow):
         hero.append(hero_copy)
         self.training_body.append(hero)
 
-        metrics = self._stack_when_compact(Gtk.Box(spacing=10, homogeneous=True))
+        metrics = self._stack_training_when_compact(Gtk.Box(spacing=10, homogeneous=True))
         completed_days = int(summary["completed_days"] or 0)
         if plan["lighter"]:
             phase_note = (
