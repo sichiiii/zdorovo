@@ -1638,6 +1638,21 @@ class UsageDatabase:
         completed = datetime.fromtimestamp(float(row["created_at"])).date()
         return completed < datetime.fromtimestamp(now or time.time()).date()
 
+    def training_workout_completed_today(
+        self,
+        enrollment_id: int,
+        now: float | None = None,
+    ) -> bool:
+        day = datetime.fromtimestamp(now or time.time()).date().isoformat()
+        row = self.conn.execute(
+            """SELECT 1 FROM training_events
+               WHERE enrollment_id=? AND duration_seconds>0
+                 AND date(created_at, 'unixepoch', 'localtime')=?
+               LIMIT 1""",
+            (int(enrollment_id), day),
+        ).fetchone()
+        return row is not None
+
     def start_training(
         self,
         course_id: str,
@@ -1815,6 +1830,8 @@ class UsageDatabase:
         session_key: str,
         duration_seconds: float = 0.0,
         now: float | None = None,
+        *,
+        allow_same_day: bool = False,
     ) -> bool:
         enrollment = self.conn.execute(
             "SELECT * FROM training_enrollments WHERE id=?", (int(enrollment_id),)
@@ -1824,7 +1841,7 @@ class UsageDatabase:
         expected_day = int(enrollment["current_day"])
         if int(course_day) != expected_day:
             raise ValueError("training day does not match active progress")
-        if not self.training_available_today(enrollment_id, now):
+        if not allow_same_day and not self.training_available_today(enrollment_id, now):
             raise ValueError("training day has already been completed today")
         completed_at = now or time.time()
         final_day = expected_day >= int(enrollment["duration_days"])
@@ -3177,6 +3194,12 @@ class BlurredWallpaper(Gtk.Widget):
         except (GLib.Error, OSError):
             self.texture = None
 
+    def set_dark(self, dark: bool) -> None:
+        if self.dark == dark:
+            return
+        self.dark = dark
+        self.queue_draw()
+
     @staticmethod
     def _color(value: str) -> Gdk.RGBA:
         color = Gdk.RGBA()
@@ -4009,6 +4032,7 @@ class MainWindow(Adw.ApplicationWindow):
         app = self.app
         toolbar = Adw.ToolbarView()
         toolbar.add_css_class("glass-toolbar")
+        self.toolbar_view = toolbar
         header = Adw.HeaderBar()
         header.add_css_class("topbar")
         self._syncing_theme_control = False
@@ -4138,6 +4162,7 @@ class MainWindow(Adw.ApplicationWindow):
         )
         content_canvas.set_child(self.backdrop)
         content_canvas.add_overlay(split)
+        self.main_content_canvas = content_canvas
         toolbar.set_content(content_canvas)
 
         self.dashboard = self._build_dashboard()
@@ -6647,7 +6672,8 @@ class MainWindow(Adw.ApplicationWindow):
             orientation=Gtk.Orientation.VERTICAL,
             spacing=9,
             hexpand=True,
-            valign=Gtk.Align.CENTER,
+            vexpand=True,
+            valign=Gtk.Align.FILL,
             css_classes=["training-active-details"],
         )
         hero_copy.append(
@@ -6673,6 +6699,7 @@ class MainWindow(Adw.ApplicationWindow):
                 css_classes=["training-active-copy"],
             )
         )
+        hero_copy.append(Gtk.Box(vexpand=True, css_classes=["training-active-spacer"]))
         progress_head = Gtk.Box(spacing=8)
         progress_head.append(
             Gtk.Label(
@@ -6722,11 +6749,7 @@ class MainWindow(Adw.ApplicationWindow):
             ),
             css_classes=["health-primary", "training-hero-action"],
         )
-        if plan["kind"] == "rest":
-            hero_action.connect("clicked", self._complete_training_session)
-        else:
-            hero_action.connect("clicked", self._launch_training_session)
-        hero_action.set_sensitive(self.training_available)
+        hero_action.connect("clicked", self._activate_training_day)
         if not self.training_available:
             hero_action.set_label(
                 "Next day opens tomorrow" if self.language == "en" else "Следующий день откроется завтра"
@@ -6969,10 +6992,68 @@ class MainWindow(Adw.ApplicationWindow):
             GLib.source_remove(self.training_timer_source)
             self.training_timer_source = None
 
-    def _launch_training_session(self, _button: Gtk.Button) -> None:
+    def _activate_training_day(self, button: Gtk.Button) -> None:
         plan = getattr(self, "training_active_plan", None)
         enrollment_id = getattr(self, "training_active_enrollment", None)
-        if not plan or enrollment_id is None or not self.training_available or not plan.get("exercises"):
+        if not plan or enrollment_id is None:
+            return
+        if self.training_available:
+            if plan["kind"] == "rest":
+                self._complete_training_session(button)
+            else:
+                self._launch_training_session(button)
+            return
+        if plan["kind"] == "rest" and self.app.db.training_workout_completed_today(enrollment_id):
+            dialog = Adw.MessageDialog.new(
+                self,
+                "Recovery is scheduled" if self.language == "en" else "По плану сейчас восстановление",
+                (
+                    "You have already completed a workout today. This recovery day is intentional; continuing now will advance the course again today."
+                    if self.language == "en"
+                    else "Сегодня уже была тренировка. Этот день восстановления запланирован специально; продолжение сейчас ещё раз продвинет курс сегодня."
+                ),
+            )
+            dialog.add_response("cancel", "Cancel" if self.language == "en" else "Отмена")
+            dialog.add_response(
+                "continue",
+                "Continue today" if self.language == "en" else "Продолжить сегодня",
+            )
+            dialog.set_response_appearance("continue", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("cancel")
+            dialog.set_close_response("cancel")
+            dialog.connect(
+                "response",
+                lambda _dialog, response: (
+                    self._continue_training_day_early(button) if response == "continue" else None
+                ),
+            )
+            dialog.present()
+            return
+        self._continue_training_day_early(button)
+
+    def _continue_training_day_early(self, button: Gtk.Button) -> None:
+        plan = getattr(self, "training_active_plan", None)
+        if not plan:
+            return
+        if plan["kind"] == "rest":
+            self._complete_training_session(button, allow_same_day=True)
+        else:
+            self._launch_training_session(button, allow_same_day=True)
+
+    def _launch_training_session(
+        self,
+        _button: Gtk.Button,
+        *,
+        allow_same_day: bool = False,
+    ) -> None:
+        plan = getattr(self, "training_active_plan", None)
+        enrollment_id = getattr(self, "training_active_enrollment", None)
+        if (
+            not plan
+            or enrollment_id is None
+            or (not self.training_available and not allow_same_day)
+            or not plan.get("exercises")
+        ):
             return
         course = COURSES.get(str(plan["course_id"]))
         if not course:
@@ -6981,16 +7062,43 @@ class MainWindow(Adw.ApplicationWindow):
             self.app,
             plan,
             course,
-            self._finish_training_day,
+            lambda seconds: self._finish_training_day(
+                seconds,
+                allow_same_day=allow_same_day,
+            ),
+            self._training_overlay_closed,
         )
-        overlay.set_transient_for(self)
+        runner_stage = overlay.get_child()
+        if runner_stage is None:
+            overlay.destroy()
+            return
+        overlay.set_child(None)
+        overlay.set_modal(False)
         self.training_overlay = overlay
-        overlay.present()
+        self.toolbar_view.set_content(runner_stage)
 
-    def _complete_training_session(self, _button: Gtk.Button) -> None:
-        self._finish_training_day(0.0)
+    def _training_overlay_closed(self, overlay: Gtk.Window) -> None:
+        if getattr(self, "training_overlay", None) is not overlay:
+            return
+        self.toolbar_view.set_content(self.main_content_canvas)
+        self.training_overlay = None
+        self.stack.set_visible_child_name("training")
+        self.refresh(rebuild_lists=True)
 
-    def _finish_training_day(self, duration_seconds: float) -> None:
+    def _complete_training_session(
+        self,
+        _button: Gtk.Button,
+        *,
+        allow_same_day: bool = False,
+    ) -> None:
+        self._finish_training_day(0.0, allow_same_day=allow_same_day)
+
+    def _finish_training_day(
+        self,
+        duration_seconds: float,
+        *,
+        allow_same_day: bool = False,
+    ) -> None:
         plan = getattr(self, "training_active_plan", None)
         enrollment_id = getattr(self, "training_active_enrollment", None)
         if not plan or enrollment_id is None:
@@ -7002,6 +7110,7 @@ class MainWindow(Adw.ApplicationWindow):
             int(plan["course_day"]),
             str(plan["session_key"]),
             duration_seconds,
+            allow_same_day=allow_same_day,
         )
         self._reset_training_timer()
         self.training_session_token = None
@@ -9115,6 +9224,9 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.remove_css_class("dark-mode")
         self.backdrop.set_dark(dark)
+        runner = getattr(self, "training_overlay", None)
+        if runner is not None:
+            runner.apply_theme_state(dark)
         self.apply_palette_state()
 
     def apply_palette_state(self) -> None:
@@ -9158,7 +9270,7 @@ class MainWindow(Adw.ApplicationWindow):
 
 
 class TrainingSessionOverlay(Gtk.ApplicationWindow):
-    """Fullscreen course runner with automatic timed stages and explicit rep confirmation."""
+    """Guided course runner with automatic timed stages and explicit rep confirmation."""
 
     def __init__(
         self,
@@ -9166,11 +9278,14 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         plan: dict[str, Any],
         course: dict[str, Any],
         on_complete: Callable[[float], None],
+        on_close: Callable[[Gtk.Window], None] | None = None,
     ) -> None:
         super().__init__(application=app, decorated=False, title=str(plan["title"]))
         self.plan = plan
         self.course = course
         self.on_complete = on_complete
+        self.on_close = on_close
+        self.close_notified = False
         self.language = str(app.config.data.get("language", "en"))
         self.dark = bool(app.config.data.get("dark_mode", False))
         self.stages = training_stages(plan)
@@ -9191,6 +9306,7 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
             self.add_css_class("break-dark")
             self.add_css_class("dark-mode")
         parent = app.window
+        self.dialog_parent = parent if isinstance(parent, Gtk.Window) else self
         if isinstance(parent, Gtk.Window):
             self.set_transient_for(parent)
             parent_width = parent.get_width() or 1060
@@ -9203,7 +9319,12 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         self.set_modal(True)
 
         stage = Gtk.Overlay()
-        stage.set_child(BlurredWallpaper(self.dark))
+        self.stage = stage
+        if self.dark:
+            stage.add_css_class("break-dark")
+            stage.add_css_class("dark-mode")
+        self.wallpaper = BlurredWallpaper(self.dark)
+        stage.set_child(self.wallpaper)
         frame = Gtk.CenterBox(orientation=Gtk.Orientation.VERTICAL, css_classes=["training-runner-bg"])
         frame.set_hexpand(True)
         frame.set_vexpand(True)
@@ -9339,7 +9460,7 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
 
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._block_action_keys)
-        self.add_controller(keys)
+        stage.add_controller(keys)
         self.connect("close-request", self._on_close_request)
         self.connect("destroy", self._cleanup)
         self._render_stage()
@@ -9352,6 +9473,16 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         content.append(Gtk.Image.new_from_icon_name(icon_name))
         content.append(Gtk.Label(label=text))
         button.set_child(content)
+
+    def apply_theme_state(self, dark: bool) -> None:
+        self.dark = dark
+        self.wallpaper.set_dark(dark)
+        if dark:
+            self.stage.add_css_class("break-dark")
+            self.stage.add_css_class("dark-mode")
+        else:
+            self.stage.remove_css_class("break-dark")
+            self.stage.remove_css_class("dark-mode")
 
     @staticmethod
     def _clock(value: float) -> str:
@@ -9564,7 +9695,7 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
 
     def _primary_clicked(self, _button: Gtk.Button) -> None:
         if self.completed:
-            self.destroy()
+            self._close_runner()
             return
         if not self.running:
             return
@@ -9627,10 +9758,10 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
 
     def _request_close(self, _button: Gtk.Button | None = None) -> None:
         if self.completed:
-            self.destroy()
+            self._close_runner()
             return
         dialog = Adw.MessageDialog.new(
-            self,
+            self.dialog_parent,
             "End this workout?" if self.language == "en" else "Завершить тренировку?",
             (
                 "This unfinished session will not advance the course or appear as completed in the calendar."
@@ -9645,9 +9776,18 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         dialog.set_close_response("continue")
         dialog.connect(
             "response",
-            lambda _dialog, response: self.destroy() if response == "end" else None,
+            lambda _dialog, response: self._close_runner() if response == "end" else None,
         )
         dialog.present()
+
+    def _close_runner(self) -> None:
+        if self.close_notified:
+            return
+        self.close_notified = True
+        self._cleanup(self)
+        if self.on_close is not None:
+            self.on_close(self)
+        self.destroy()
 
     def _on_close_request(self, _window: Gtk.Window) -> bool:
         self._request_close()

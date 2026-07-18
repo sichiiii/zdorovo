@@ -642,11 +642,21 @@ class CoreTests(unittest.TestCase):
         self.assertIn("self.primary_button.set_size_request(220, 46)", runner_source)
         self.assertIn("content_scroll.set_child(content)", runner_source)
         self.assertNotIn("runner_scroll.set_child(clamp)", runner_source)
+        self.assertIn('stage.add_css_class("break-dark")', runner_source)
+
+        main_source = source.split("class MainWindow", 1)[1].split("class TrainingSessionOverlay", 1)[0]
+        launch_source = main_source.split("def _launch_training_session", 1)[1].split(
+            "def _training_overlay_closed", 1
+        )[0]
+        self.assertIn("self.toolbar_view.set_content(runner_stage)", launch_source)
+        self.assertNotIn("overlay.present()", launch_source)
+        self.assertIn("self.toolbar_view.set_content(self.main_content_canvas)", main_source)
 
         css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
         self.assertIn(".training-active-hero-layout { min-width: 0; }", css)
         self.assertIn(".training-active-details { min-width: 290px; }", css)
         self.assertIn('Adw.BreakpointCondition.parse("max-width: 760sp")', source)
+        self.assertIn('Gtk.Box(vexpand=True, css_classes=["training-active-spacer"])', source)
         self.assertIn(".training-days-flow flowboxchild { min-width: 84px; }", css)
 
     def test_course_selection_returns_training_page_to_the_top(self):
@@ -664,6 +674,31 @@ class CoreTests(unittest.TestCase):
         self.assertGreaterEqual(source.count("self._rebuild_active_training_at_top()"), 5)
         self.assertIn("GLib.idle_add(self._finish_opening_active_training)", source)
         self.assertIn("self.training_scroller = page.get_child()", source)
+
+    def test_unavailable_training_day_can_be_opened_early(self):
+        calls = []
+        window = SimpleNamespace(
+            training_active_plan={"kind": "strength"},
+            training_active_enrollment=7,
+            training_available=False,
+            _continue_training_day_early=lambda button: calls.append(button),
+        )
+        button = object()
+        MODULE.MainWindow._activate_training_day(window, button)
+        self.assertEqual(calls, [button])
+
+        rest_calls = []
+        rest_window = SimpleNamespace(
+            training_active_plan={"kind": "rest"},
+            _complete_training_session=lambda button, **kwargs: rest_calls.append((button, kwargs)),
+            _launch_training_session=lambda *_args, **_kwargs: self.fail("rest must not launch a runner"),
+        )
+        MODULE.MainWindow._continue_training_day_early(rest_window, button)
+        self.assertEqual(rest_calls, [(button, {"allow_same_day": True})])
+
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn('"Recovery is scheduled"', source)
+        self.assertIn('"Continue today"', source)
 
     def test_training_setup_uses_answers_to_recommend_one_course(self):
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
@@ -918,6 +953,21 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(source.training_available_today(enrollment_id, now=now))
         with self.assertRaises(ValueError):
             source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 60)
+        self.assertTrue(source.training_workout_completed_today(enrollment_id, now=now + 60))
+        self.assertFalse(
+            source.complete_training_day(
+                enrollment_id,
+                2,
+                "recovery",
+                0,
+                now=now + 60,
+                allow_same_day=True,
+            )
+        )
+        self.assertEqual(source.active_training()["current_day"], 3)
+        source.reset_training(enrollment_id, now=now)
+        self.assertFalse(source.training_workout_completed_today(enrollment_id, now=now + 60))
+        self.assertFalse(source.complete_training_day(enrollment_id, 1, "a", 420, now=now))
         self.assertFalse(source.complete_training_day(enrollment_id, 2, "recovery", 240, now=now + 86400))
         self.assertEqual(source.active_training()["current_day"], 3)
         self.assertEqual(source.training_summary(enrollment_id)["completed_days"], 2)
