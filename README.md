@@ -56,8 +56,8 @@ workflow:
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/training-light-scroll-620.png" alt="Training course catalogue">
-      <p align="center"><strong>Choose a sustainable course</strong><br><sub>Pick two to five exact weekdays, then match the workload to your recent training experience.</sub></p>
+      <img src="docs/screenshots/training-light.png" alt="Guided training plan finder">
+      <p align="center"><strong>Find one sustainable plan</strong><br><sub>Answer six short questions about your goal, preferred approach, weekly schedule, preparation and course length.</sub></p>
     </td>
     <td width="50%">
       <img src="docs/screenshots/training-course-dark.png" alt="A training course day">
