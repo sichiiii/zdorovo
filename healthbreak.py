@@ -9436,6 +9436,16 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         actions = Gtk.Box(spacing=10, halign=Gtk.Align.END, css_classes=["training-runner-actions"])
         actions.set_hexpand(True)
         actions.set_valign(Gtk.Align.END)
+        self.back_button = Gtk.Button(css_classes=["break-button", "break-secondary"])
+        self.back_button.set_size_request(140, 46)
+        self._set_button(
+            self.back_button,
+            "go-previous-symbolic",
+            "Back" if self.language == "en" else "Назад",
+        )
+        self.back_button.set_focusable(False)
+        self.back_button.connect("clicked", self._go_back)
+        actions.append(self.back_button)
         self.pause_button = Gtk.Button(css_classes=["break-button", "break-secondary"])
         self.pause_button.set_size_request(170, 46)
         self._set_button(
@@ -9513,6 +9523,12 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
                 return item
         return None
 
+    def _previous_exercise_index(self) -> int | None:
+        for index in range(self.stage_index - 1, -1, -1):
+            if self.stages[index]["type"] == "exercise":
+                return index
+        return None
+
     def _set_picture(self, image_name: str | None) -> None:
         path = ASSET_ROOT / image_name if image_name else None
         if path and path.exists():
@@ -9525,6 +9541,8 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         current = self._current()
         completed, total = self._exercise_position()
         self.overall_progress.set_fraction(min(1.0, completed / total))
+        self.back_button.set_visible(not self.completed)
+        self.back_button.set_sensitive(self._previous_exercise_index() is not None)
         if self.stage_index < 0:
             self.stage_caption.set_text("PREPARATION" if self.language == "en" else "ПОДГОТОВКА")
             self.stage_title.set_text("Get into position" if self.language == "en" else "Приготовьтесь")
@@ -9675,6 +9693,21 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
         play_guidance_sound(self.get_application().config.data, "step")
         self._render_stage()
 
+    def _go_back(self, _button: Gtk.Button) -> None:
+        if self.completed:
+            return
+        previous_index = self._previous_exercise_index()
+        if previous_index is None:
+            return
+        self.stage_index = previous_index
+        current = self.stages[self.stage_index]
+        duration = current.get("duration_seconds")
+        self.stage_remaining = float(duration) if duration is not None else None
+        self.stage_duration = float(duration or 0)
+        self.last_tick = time.monotonic()
+        play_guidance_sound(self.get_application().config.data, "step")
+        self._render_stage()
+
     def _tick(self) -> bool:
         if self.completed:
             self.timer_source = None
@@ -9747,6 +9780,7 @@ class TrainingSessionOverlay(Gtk.ApplicationWindow):
             else "Оставляйте только ту нагрузку, которая остаётся комфортной."
         )
         self.next_stage.set_text("")
+        self.back_button.set_visible(False)
         self.pause_button.set_visible(False)
         self.primary_button.set_visible(True)
         self.primary_button.set_sensitive(True)

@@ -640,6 +640,8 @@ class CoreTests(unittest.TestCase):
         self.assertIn("actions.set_valign(Gtk.Align.END)", runner_source)
         self.assertIn("self.pause_button.set_size_request(170, 46)", runner_source)
         self.assertIn("self.primary_button.set_size_request(220, 46)", runner_source)
+        self.assertIn("self.back_button.set_size_request(140, 46)", runner_source)
+        self.assertIn('"Back" if self.language == "en" else "Назад"', runner_source)
         self.assertIn("content_scroll.set_child(content)", runner_source)
         self.assertNotIn("runner_scroll.set_child(clamp)", runner_source)
         self.assertIn('stage.add_css_class("break-dark")', runner_source)
@@ -658,6 +660,46 @@ class CoreTests(unittest.TestCase):
         self.assertIn('Adw.BreakpointCondition.parse("max-width: 760sp")', source)
         self.assertIn('Gtk.Box(vexpand=True, css_classes=["training-active-spacer"])', source)
         self.assertIn(".training-days-flow flowboxchild { min-width: 84px; }", css)
+
+        runner = SimpleNamespace(
+            stage_index=4,
+            stages=[
+                {"type": "exercise"},
+                {"type": "rest"},
+                {"type": "exercise"},
+                {"type": "rest"},
+                {"type": "exercise"},
+            ],
+        )
+        self.assertEqual(MODULE.TrainingSessionOverlay._previous_exercise_index(runner), 2)
+        runner.stage_index = 3
+        self.assertEqual(MODULE.TrainingSessionOverlay._previous_exercise_index(runner), 2)
+        runner.stage_index = 0
+        self.assertIsNone(MODULE.TrainingSessionOverlay._previous_exercise_index(runner))
+
+        rendered = []
+        application = SimpleNamespace(config=SimpleNamespace(data={}))
+        rest_runner = SimpleNamespace(
+            completed=False,
+            stage_index=1,
+            stages=[
+                {"type": "exercise", "duration_seconds": 45},
+                {"type": "rest", "duration_seconds": 20},
+            ],
+            _previous_exercise_index=lambda: 0,
+            get_application=lambda: application,
+            _render_stage=lambda: rendered.append(True),
+        )
+        original_sound = MODULE.play_guidance_sound
+        MODULE.play_guidance_sound = lambda *_args: None
+        try:
+            MODULE.TrainingSessionOverlay._go_back(rest_runner, None)
+        finally:
+            MODULE.play_guidance_sound = original_sound
+        self.assertEqual(rest_runner.stage_index, 0)
+        self.assertEqual(rest_runner.stage_remaining, 45.0)
+        self.assertEqual(rest_runner.stage_duration, 45.0)
+        self.assertEqual(rendered, [True])
 
     def test_course_selection_returns_training_page_to_the_top(self):
         values = []
