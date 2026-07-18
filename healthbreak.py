@@ -5192,10 +5192,26 @@ class MainWindow(Adw.ApplicationWindow):
             adjustment.set_value(adjustment.get_lower())
         return GLib.SOURCE_REMOVE
 
+    def _finish_opening_active_training(self) -> bool:
+        if self.app.db.active_training() is None:
+            return GLib.SOURCE_REMOVE
+        if self.stack.get_visible_child_name() != "training":
+            self.stack.set_visible_child_name("training")
+        # Gtk.StackSidebar may emit its page-change notification after a
+        # confirmation dialog responds. Re-assert the active view once that
+        # event has settled so Reset progress cannot leave the catalogue open.
+        if self.training_view != "active":
+            self.training_view = "active"
+            self._rebuild_training()
+        self._scroll_training_to_top()
+        return GLib.SOURCE_REMOVE
+
     def _rebuild_active_training_at_top(self) -> None:
+        if self.stack.get_visible_child_name() != "training":
+            self.stack.set_visible_child_name("training")
         self.training_view = "active"
         self._rebuild_training()
-        GLib.idle_add(self._scroll_training_to_top)
+        GLib.idle_add(self._finish_opening_active_training)
 
     def _show_training_catalog(self, _button: Gtk.Button | None = None) -> None:
         self.training_view = "catalog"

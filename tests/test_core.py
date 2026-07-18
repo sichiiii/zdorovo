@@ -661,6 +661,39 @@ class CoreTests(unittest.TestCase):
 
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
         self.assertGreaterEqual(source.count("self._rebuild_active_training_at_top()"), 5)
+        self.assertIn("GLib.idle_add(self._finish_opening_active_training)", source)
+
+    def test_training_reset_reopens_active_course_after_dialog_settles(self):
+        rebuilds = []
+        scrolls = []
+
+        class Stack:
+            visible = "training"
+
+            def get_visible_child_name(self):
+                return self.visible
+
+            def set_visible_child_name(self, name):
+                self.visible = name
+
+        window = SimpleNamespace(
+            app=SimpleNamespace(db=SimpleNamespace(active_training=lambda: object())),
+            stack=Stack(),
+            training_view="catalog",
+            _rebuild_training=lambda: rebuilds.append("active"),
+            _scroll_training_to_top=lambda: scrolls.append(0),
+        )
+        result = MODULE.MainWindow._finish_opening_active_training(window)
+        self.assertEqual(window.training_view, "active")
+        self.assertEqual(window.stack.visible, "training")
+        self.assertEqual(rebuilds, ["active"])
+        self.assertEqual(scrolls, [0])
+        self.assertEqual(result, MODULE.GLib.SOURCE_REMOVE)
+
+    def test_sidebar_navigation_has_group_dividers(self):
+        css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        self.assertIn(".sidebar stacksidebar row:nth-child(5)", css)
+        self.assertIn(".sidebar stacksidebar row:nth-child(7)", css)
 
     def test_strength_days_progress_until_the_planned_lighter_week(self):
         for course_id in MODULE.COURSES:
@@ -689,6 +722,31 @@ class CoreTests(unittest.TestCase):
         lighter = MODULE.training_day("full_body", 22, 180, fitness_level="regular")
         self.assertTrue(lighter["lighter"])
         self.assertEqual(lighter["build_step"], 0)
+
+    def test_new_or_reset_course_starts_with_a_workout_on_an_off_day(self):
+        saturday = MODULE.datetime(2026, 7, 18, 12, 0)
+        database = MODULE.UsageDatabase(Path(TMP.name) / "training-reset-start.sqlite3")
+        enrollment = database.start_training(
+            "full_body",
+            30,
+            "beginner",
+            weekdays=(0, 2, 4),
+            now=saturday.timestamp(),
+        )
+        reset = database.reset_training(int(enrollment["id"]), now=saturday.timestamp())
+        plan = MODULE.training_day(
+            str(reset["course_id"]),
+            int(reset["current_day"]),
+            int(reset["duration_days"]),
+            "en",
+            str(reset["fitness_level"]),
+            int(reset["days_per_week"]),
+            json.loads(str(reset["weekdays"])),
+            saturday.weekday(),
+        )
+        self.assertEqual(plan["kind"], "strength")
+        self.assertEqual(plan["session_key"], "a")
+        self.assertTrue(plan["exercises"])
 
     def test_training_uses_packaged_photos_and_no_workout_equipment(self):
         forbidden = (
