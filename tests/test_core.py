@@ -692,6 +692,7 @@ class CoreTests(unittest.TestCase):
 
     def test_sidebar_navigation_has_group_dividers(self):
         css = (Path(__file__).parents[1] / "assets" / "style.css").read_text()
+        self.assertIn(".sidebar stacksidebar row:nth-child(2)", css)
         self.assertIn(".sidebar stacksidebar row:nth-child(5)", css)
         self.assertIn(".sidebar stacksidebar row:nth-child(7)", css)
 
