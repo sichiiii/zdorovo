@@ -27,6 +27,7 @@
     <binary>zdorovo</binary>
   </provides>
   <releases>
+    <release version="0.1.8" date="2026-07-18"/>
     <release version="0.1.7" date="2026-07-17"/>
     <release version="0.1.6" date="2026-07-16"/>
     <release version="0.1.5" date="2026-07-13"/>
