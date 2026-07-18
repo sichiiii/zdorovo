@@ -662,6 +662,47 @@ class CoreTests(unittest.TestCase):
         source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
         self.assertGreaterEqual(source.count("self._rebuild_active_training_at_top()"), 5)
         self.assertIn("GLib.idle_add(self._finish_opening_active_training)", source)
+        self.assertIn("self.training_scroller = page.get_child()", source)
+
+    def test_training_setup_uses_answers_to_recommend_one_course(self):
+        source = (Path(__file__).parents[1] / "healthbreak.py").read_text()
+        self.assertIn('self.training_setup_step = 0', source)
+        self.assertIn('self.training_view = "active" if active_training else "setup"', source)
+        self.assertIn('self._training_answer_options(', source)
+        self.assertIn('recommendation = self._training_recommendation_card()', source)
+        self.assertIn('"Your recommended plan"', source)
+        self.assertNotIn('training_course_choice_buttons', source)
+        self.assertNotIn('"Choose one course"', source)
+        self.assertIn('label="Change course" if self.language == "en" else "Сменить курс"', source)
+        self.assertIn('self._training_setup_progress()', source)
+
+        answers = SimpleNamespace(training_goal_choice="balanced", training_style_choice="steady")
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "full_body")
+        answers.training_goal_choice = "upper"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "upper_body")
+        answers.training_goal_choice = "mobility"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "balance")
+        answers.training_goal_choice = "lower"
+        answers.training_style_choice = "gentle"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "legs")
+        answers.training_style_choice = "strength"
+        self.assertEqual(MODULE.MainWindow._recommended_training_course(answers), "lower_body")
+
+        opened = []
+        started = []
+        window = SimpleNamespace(
+            app=SimpleNamespace(db=SimpleNamespace(active_training=lambda: {"course_id": "full_body"})),
+            training_course_choice="full_body",
+            _rebuild_active_training_at_top=lambda: opened.append(True),
+            _start_training_course=lambda _button, course_id: started.append(course_id),
+        )
+        MODULE.MainWindow._finish_training_setup(window, None)
+        self.assertEqual(opened, [True])
+        self.assertEqual(started, [])
+
+        window.training_course_choice = "upper_body"
+        MODULE.MainWindow._finish_training_setup(window, None)
+        self.assertEqual(started, ["upper_body"])
 
     def test_training_reset_reopens_active_course_after_dialog_settles(self):
         rebuilds = []

@@ -3975,7 +3975,23 @@ class MainWindow(Adw.ApplicationWindow):
             int(app.config.data.get("training_days_per_week", 3)),
         )
         self.training_days_choice = len(self.training_weekdays_choice)
-        self.training_view = "catalog"
+        active_training = app.db.active_training()
+        self.training_course_choice = (
+            str(active_training["course_id"]) if active_training else next(iter(COURSES))
+        )
+        saved_answers = {
+            "full_body": ("balanced", "steady"),
+            "upper_body": ("upper", "steady"),
+            "legs": ("lower", "gentle"),
+            "lower_body": ("lower", "strength"),
+            "balance": ("mobility", "gentle"),
+        }
+        self.training_goal_choice, self.training_style_choice = saved_answers.get(
+            self.training_course_choice,
+            ("balanced", "steady"),
+        )
+        self.training_setup_step = 0
+        self.training_view = "active" if active_training else "setup"
         self.training_calendar_month = date.today().replace(day=1)
         self.training_elapsed = 0.0
         self.training_running = False
@@ -4953,8 +4969,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.refresh(rebuild_lists=False)
 
     def _build_training(self) -> Gtk.Widget:
-        scroller, content = self._page()
-        self.training_scroller = scroller
+        page, content = self._page()
+        self.training_scroller = page.get_child()
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.training_page_title = Gtk.Label(xalign=0, css_classes=["page-title"])
         self.training_page_subtitle = Gtk.Label(
@@ -4968,7 +4984,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.training_body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         content.append(self.training_body)
         self._rebuild_training()
-        return scroller
+        return page
 
     def _training_course_visual(
         self,
@@ -5018,7 +5034,15 @@ class MainWindow(Adw.ApplicationWindow):
         copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
         copy.append(
             Gtk.Label(
-                label="WEEKLY RHYTHM" if self.language == "en" else "РИТМ НЕДЕЛИ",
+                label=(
+                    "WEEKLY RHYTHM"
+                    if active and self.language == "en"
+                    else "РИТМ НЕДЕЛИ"
+                    if active
+                    else "YOUR WEEK"
+                    if self.language == "en"
+                    else "ВАША НЕДЕЛЯ"
+                ),
                 xalign=0,
                 css_classes=["training-visual-kicker"],
             )
@@ -5030,7 +5054,9 @@ class MainWindow(Adw.ApplicationWindow):
                     if active and self.language == "en"
                     else "Силовая работа, лёгкие дни и отдых"
                     if active
-                    else training_copy(course, "title", self.language)
+                    else "Training and recovery on your schedule"
+                    if self.language == "en"
+                    else "Нагрузка и восстановление по вашему расписанию"
                 ),
                 xalign=0,
                 wrap=True,
@@ -5132,55 +5158,6 @@ class MainWindow(Adw.ApplicationWindow):
         card.append(copy)
         return card
 
-    def _training_active_banner(self, enrollment: sqlite3.Row) -> Gtk.Widget:
-        course = COURSES.get(str(enrollment["course_id"]))
-        if not course:
-            return Gtk.Box()
-        card = Gtk.Box(spacing=14, css_classes=["training-active-banner"])
-        card.append(activity_icon(str(course["icon"]), 26, "training-active-banner-icon"))
-        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
-        copy.append(
-            Gtk.Label(
-                label="ACTIVE PLAN" if self.language == "en" else "АКТИВНЫЙ ПЛАН",
-                xalign=0,
-                css_classes=["training-kicker"],
-            )
-        )
-        copy.append(
-            Gtk.Label(
-                label=training_copy(course, "title", self.language),
-                xalign=0,
-                css_classes=["section-title"],
-            )
-        )
-        level = FITNESS_LEVELS.get(str(enrollment["fitness_level"]), FITNESS_LEVELS["beginner"])
-        selected_weekdays = self._enrollment_weekdays(enrollment)
-        copy.append(
-            Gtk.Label(
-                label=(
-                    f"Day {int(enrollment['current_day'])} of {int(enrollment['duration_days'])}  ·  "
-                    f"{self._weekday_names(selected_weekdays)}  ·  "
-                    f"{training_copy(level, 'title', self.language)}"
-                    if self.language == "en"
-                    else f"День {int(enrollment['current_day'])} из {int(enrollment['duration_days'])}  ·  "
-                    f"{self._weekday_names(selected_weekdays)}  ·  "
-                    f"{training_copy(level, 'title', self.language)}"
-                ),
-                xalign=0,
-                wrap=True,
-                css_classes=["muted", "caption"],
-            )
-        )
-        card.append(copy)
-        button = Gtk.Button(
-            label="Open today’s workout" if self.language == "en" else "Открыть тренировку",
-            valign=Gtk.Align.CENTER,
-            css_classes=["health-primary"],
-        )
-        button.connect("clicked", self._show_active_training)
-        card.append(button)
-        return card
-
     def _show_active_training(self, _button: Gtk.Button | None = None) -> None:
         if self.app.db.active_training() is None:
             return
@@ -5214,8 +5191,26 @@ class MainWindow(Adw.ApplicationWindow):
         GLib.idle_add(self._finish_opening_active_training)
 
     def _show_training_catalog(self, _button: Gtk.Button | None = None) -> None:
-        self.training_view = "catalog"
+        active = self.app.db.active_training()
+        if active is not None:
+            self.training_course_choice = str(active["course_id"])
+            saved_answers = {
+                "full_body": ("balanced", "steady"),
+                "upper_body": ("upper", "steady"),
+                "legs": ("lower", "gentle"),
+                "lower_body": ("lower", "strength"),
+                "balance": ("mobility", "gentle"),
+            }
+            self.training_goal_choice, self.training_style_choice = saved_answers.get(
+                self.training_course_choice,
+                ("balanced", "steady"),
+            )
+        elif self.training_course_choice not in COURSES:
+            self.training_course_choice = next(iter(COURSES))
+        self.training_setup_step = 0
+        self.training_view = "setup"
         self._rebuild_training()
+        GLib.idle_add(self._scroll_training_to_top)
 
     def _rebuild_training(self) -> None:
         if not hasattr(self, "training_body"):
@@ -5226,7 +5221,10 @@ class MainWindow(Adw.ApplicationWindow):
                 training_stack_page.set_title(self._t("Тренировки"))
         clear_box(self.training_body)
         enrollment = self.app.db.active_training()
-        if enrollment and self.training_view == "active":
+        if enrollment is None and self.training_view != "setup":
+            self.training_setup_step = 0
+            self.training_view = "setup"
+        if enrollment and self.training_view != "setup":
             self.training_page_title.set_text(
                 "Today’s course" if self.language == "en" else "Тренировка на сегодня"
             )
@@ -5238,25 +5236,463 @@ class MainWindow(Adw.ApplicationWindow):
             self._render_active_training(enrollment)
         else:
             self.training_page_title.set_text(
-                "Build your training plan" if self.language == "en" else "Соберите план тренировок"
+                "Find your training plan" if self.language == "en" else "Подберите курс тренировок"
             )
             self.training_page_subtitle.set_text(
-                "Choose a course, weekly rhythm and preparation level. You can revise the plan later."
+                "Answer a few short questions and get one clear plan for your week."
                 if self.language == "en"
-                else "Выберите курс, недельный ритм и уровень подготовки. Позже план можно изменить."
+                else "Ответьте на несколько коротких вопросов и получите один понятный план на неделю."
             )
             self._render_training_catalog()
 
-    def _render_training_catalog(self) -> None:
-        self.training_course_start_buttons: list[Gtk.Button] = []
+    def _training_setup_progress(self) -> Gtk.Widget:
+        titles = (
+            ("Goal", "Approach", "Schedule", "Level", "Length", "Plan")
+            if self.language == "en"
+            else ("Цель", "Подход", "Расписание", "Уровень", "Срок", "План")
+        )
+        progress = Gtk.Box(
+            spacing=6,
+            homogeneous=True,
+            css_classes=["training-setup-progress"],
+        )
+        for index, title in enumerate(titles):
+            item = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL,
+                spacing=4,
+                css_classes=["training-setup-progress-item"],
+            )
+            if index < self.training_setup_step:
+                item.add_css_class("complete")
+            elif index == self.training_setup_step:
+                item.add_css_class("current")
+            item.append(
+                Gtk.Label(
+                    label=str(index + 1),
+                    css_classes=["training-setup-progress-number"],
+                )
+            )
+            item.append(
+                Gtk.Label(
+                    label=title,
+                    wrap=True,
+                    justify=Gtk.Justification.CENTER,
+                    css_classes=["training-setup-progress-label"],
+                )
+            )
+            progress.append(item)
+        return progress
+
+    def _recommended_training_course(self) -> str:
+        if self.training_goal_choice == "upper":
+            return "upper_body"
+        if self.training_goal_choice == "mobility":
+            return "balance"
+        if self.training_goal_choice == "lower":
+            return "lower_body" if self.training_style_choice == "strength" else "legs"
+        return "full_body"
+
+    def _training_goal_selected(self, button: Gtk.ToggleButton, goal: str) -> None:
+        if button.get_active():
+            self.training_goal_choice = goal
+            self.training_course_choice = self._recommended_training_course()
+
+    def _training_style_selected(self, button: Gtk.ToggleButton, style: str) -> None:
+        if button.get_active():
+            self.training_style_choice = style
+            self.training_course_choice = self._recommended_training_course()
+
+    def _training_answer_options(
+        self,
+        options: tuple[tuple[str, str, str], ...],
+        selected: str,
+        callback: Callable[[Gtk.ToggleButton, str], None],
+    ) -> Gtk.Widget:
+        choices = self._responsive_flow("training-answer-options", columns=2, spacing=9)
+        first: Gtk.ToggleButton | None = None
+        for value, title, description in options:
+            button = Gtk.ToggleButton(css_classes=["training-answer-button"])
+            if first is None:
+                first = button
+            else:
+                button.set_group(first)
+            copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            copy.append(
+                Gtk.Label(
+                    label=title,
+                    xalign=0,
+                    wrap=True,
+                    css_classes=["card-title"],
+                )
+            )
+            copy.append(
+                Gtk.Label(
+                    label=description,
+                    xalign=0,
+                    wrap=True,
+                    css_classes=["muted", "caption"],
+                )
+            )
+            button.set_child(copy)
+            button.set_active(value == selected)
+            button.connect("toggled", callback, value)
+            choices.append(button)
+        return choices
+
+    def _training_recommendation_card(self) -> Gtk.Widget:
+        self.training_course_choice = self._recommended_training_course()
+        course = COURSES[self.training_course_choice]
+        goal_reasons = (
+            {
+                "balanced": "You asked for balanced work across the whole body.",
+                "upper": "You want more attention on the arms, shoulders and upper back.",
+                "lower": "You want stronger legs and steadier everyday movement.",
+                "mobility": "You want more comfortable mobility and supported balance practice.",
+            }
+            if self.language == "en"
+            else {
+                "balanced": "Вы выбрали равномерную работу для всего тела.",
+                "upper": "Вам важнее руки, плечи и верхняя часть спины.",
+                "lower": "Вы хотите укрепить ноги и увереннее двигаться в быту.",
+                "mobility": "Вам важнее комфортная подвижность и баланс рядом с опорой.",
+            }
+        )
+        style_reasons = (
+            {
+                "gentle": "The plan starts gently and keeps extra recovery between demanding days.",
+                "steady": "The workload rises gradually without chasing exhaustion.",
+                "strength": "The plan uses more strength-focused variations and progressive volume.",
+            }
+            if self.language == "en"
+            else {
+                "gentle": "План начинается мягко и оставляет больше восстановления между нагрузками.",
+                "steady": "Нагрузка растёт постепенно, без работы до изнеможения.",
+                "strength": "В плане больше силовых вариантов и постепенно растущий объём.",
+            }
+        )
+        card = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=12,
+            css_classes=["card", "training-recommendation-card"],
+        )
+        card.append(
+            self._training_course_visual(
+                course,
+                days_per_week=self.training_days_choice,
+                weekdays=self.training_weekdays_choice,
+            )
+        )
+        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        copy.append(
+            Gtk.Label(
+                label=training_copy(course, "title", self.language),
+                xalign=0,
+                wrap=True,
+                css_classes=["training-recommendation-title"],
+            )
+        )
+        copy.append(
+            Gtk.Label(
+                label=training_copy(course, "description", self.language),
+                xalign=0,
+                wrap=True,
+                css_classes=["training-recommendation-description"],
+            )
+        )
+        copy.append(
+            Gtk.Label(
+                label=(
+                    f"{goal_reasons[self.training_goal_choice]} "
+                    f"{style_reasons[self.training_style_choice]}"
+                ),
+                xalign=0,
+                wrap=True,
+                css_classes=["training-recommendation-reason"],
+            )
+        )
+        card.append(copy)
+        facts = self._responsive_flow("training-recommendation-facts", columns=3, spacing=7)
+        level = FITNESS_LEVELS[self.training_fitness_choice]
+        fact_values = (
+            (
+                ("Length", f"{self.training_duration_choice} days"),
+                ("Level", training_copy(level, "title", self.language)),
+                ("Training days", self._weekday_names(self.training_weekdays_choice)),
+            )
+            if self.language == "en"
+            else (
+                ("Длительность", f"{self.training_duration_choice} дней"),
+                ("Уровень", training_copy(level, "title", self.language)),
+                ("Дни тренировок", self._weekday_names(self.training_weekdays_choice)),
+            )
+        )
+        for label, value in fact_values:
+            fact = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL,
+                spacing=3,
+                css_classes=["training-recommendation-fact"],
+            )
+            fact.append(Gtk.Label(label=label, xalign=0, css_classes=["muted", "caption"]))
+            fact.append(
+                Gtk.Label(
+                    label=value,
+                    xalign=0,
+                    wrap=True,
+                    css_classes=["card-title"],
+                )
+            )
+            facts.append(fact)
+        card.append(facts)
+        equipment = Gtk.Box(spacing=7, css_classes=["training-equipment"])
+        equipment.append(Gtk.Image.new_from_icon_name("applications-engineering-symbolic"))
+        equipment.append(
+            Gtk.Label(
+                label=training_copy(course, "equipment", self.language),
+                xalign=0,
+                wrap=True,
+                css_classes=["caption"],
+            )
+        )
+        card.append(equipment)
+        return card
+
+    def _set_training_setup_step(self, _button: Gtk.Button | None, step: int) -> None:
+        self.training_setup_step = max(0, min(5, int(step)))
+        self.training_course_choice = self._recommended_training_course()
+        self.training_view = "setup"
+        self._rebuild_training()
+        GLib.idle_add(self._scroll_training_to_top)
+
+    def _cancel_training_setup(self, _button: Gtk.Button) -> None:
+        if self.app.db.active_training() is not None:
+            self._rebuild_active_training_at_top()
+
+    def _finish_training_setup(self, button: Gtk.Button) -> None:
         active = self.app.db.active_training()
-        if active:
-            self.training_body.append(self._training_active_banner(active))
+        if active is not None and str(active["course_id"]) == self.training_course_choice:
+            self._rebuild_active_training_at_top()
+            return
+        self._start_training_course(button, self.training_course_choice)
+
+    def _training_setup_actions(self) -> Gtk.Widget:
+        actions = Gtk.Box(spacing=8, css_classes=["training-setup-actions"])
+        active = self.app.db.active_training()
+        if self.training_setup_step > 0:
+            back = Gtk.Button(
+                label="Back" if self.language == "en" else "Назад",
+                css_classes=["data-button"],
+            )
+            back.connect("clicked", self._set_training_setup_step, self.training_setup_step - 1)
+            actions.append(back)
+        elif active is not None:
+            cancel = Gtk.Button(
+                label="Keep current course" if self.language == "en" else "Оставить текущий курс",
+                css_classes=["data-button"],
+            )
+            cancel.connect("clicked", self._cancel_training_setup)
+            actions.append(cancel)
+        spacer = Gtk.Box(hexpand=True)
+        actions.append(spacer)
+        if self.training_setup_step < 5:
+            next_button = Gtk.Button(
+                label="Continue" if self.language == "en" else "Продолжить",
+                css_classes=["health-primary", "training-setup-primary"],
+            )
+            next_button.connect("clicked", self._set_training_setup_step, self.training_setup_step + 1)
+        else:
+            same_course = active is not None and str(active["course_id"]) == self.training_course_choice
+            next_button = Gtk.Button(
+                label=(
+                    "Open current course"
+                    if same_course and self.language == "en"
+                    else "Открыть текущий курс"
+                    if same_course
+                    else "Switch course"
+                    if active is not None and self.language == "en"
+                    else "Сменить курс"
+                    if active is not None
+                    else "Start course"
+                    if self.language == "en"
+                    else "Начать курс"
+                ),
+                css_classes=["health-primary", "training-setup-primary"],
+            )
+            next_button.connect("clicked", self._finish_training_setup)
+        actions.append(next_button)
+        return actions
+
+    def _render_training_catalog(self) -> None:
+        step = self.training_setup_step
+        step_titles = (
+            (
+                "What would you like to improve?",
+                "What pace feels realistic?",
+                "Which days fit your week?",
+                "How prepared do you feel?",
+                "Choose the course length",
+                "Your recommended plan",
+            )
+            if self.language == "en"
+            else (
+                "Что хотите улучшить?",
+                "Какой темп вам подходит?",
+                "В какие дни удобно заниматься?",
+                "Какой уровень нагрузки подходит?",
+                "Выберите длительность курса",
+                "Ваш рекомендованный план",
+            )
+        )
+        step_copies = (
+            (
+                "Choose the result that matters most right now. The app will select the course itself.",
+                "This answer changes the balance between strength work and recovery.",
+                "Choose from two to five days. Recovery stays between harder sessions.",
+                "The level changes exercise variations, volume and rest time.",
+                "Pick a horizon that feels achievable. You can change plans later.",
+                "Review why this plan fits your answers, then start today’s workout.",
+            )
+            if self.language == "en"
+            else (
+                "Выберите самый важный результат на сейчас. Сам курс приложение подберёт автоматически.",
+                "Ответ изменит соотношение силовой работы и восстановления.",
+                "Выберите от двух до пяти дней. Между нагрузками останется восстановление.",
+                "Уровень меняет варианты упражнений, объём работы и время отдыха.",
+                "Выберите посильный горизонт. Позже план можно будет сменить.",
+                "Посмотрите, почему план подходит под ваши ответы, и начните сегодняшнюю тренировку.",
+            )
+        )
+        setup_head = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=11,
+            css_classes=["card", "training-setup-head"],
+        )
+        setup_head.append(self._training_setup_progress())
+        question = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        question.append(
+            Gtk.Label(
+                label=step_titles[step],
+                xalign=0,
+                wrap=True,
+                css_classes=["section-title", "training-setup-question"],
+            )
+        )
+        question.append(
+            Gtk.Label(
+                label=step_copies[step],
+                xalign=0,
+                wrap=True,
+                css_classes=["muted", "training-setup-copy"],
+            )
+        )
+        setup_head.append(question)
+        self.training_body.append(setup_head)
+
+        goal_options = (
+            (
+                (
+                    "balanced",
+                    "Feel stronger overall",
+                    "A balanced plan for the legs, upper body and core.",
+                ),
+                (
+                    "upper",
+                    "Strengthen my upper body",
+                    "More attention to the arms, shoulders and upper back.",
+                ),
+                (
+                    "lower",
+                    "Build stronger legs",
+                    "Squats, hip work and steadier everyday movement.",
+                ),
+                (
+                    "mobility",
+                    "Move more comfortably",
+                    "Mobility and supported balance with a gentler load.",
+                ),
+            )
+            if self.language == "en"
+            else (
+                (
+                    "balanced",
+                    "Стать сильнее в целом",
+                    "Равномерный план для ног, верха тела и мышц корпуса.",
+                ),
+                (
+                    "upper",
+                    "Укрепить верх тела",
+                    "Больше внимания рукам, плечам и верхней части спины.",
+                ),
+                (
+                    "lower",
+                    "Укрепить ноги",
+                    "Приседания, работа тазом и устойчивость в обычных движениях.",
+                ),
+                (
+                    "mobility",
+                    "Двигаться свободнее",
+                    "Подвижность и баланс рядом с опорой при мягкой нагрузке.",
+                ),
+            )
+        )
+        goals = self._training_answer_options(
+            goal_options,
+            self.training_goal_choice,
+            self._training_goal_selected,
+        )
+        goals.set_visible(step == 0)
+        self.training_body.append(goals)
+
+        style_options = (
+            (
+                (
+                    "gentle",
+                    "Start gently",
+                    "Shorter work blocks, easier variations and more recovery.",
+                ),
+                (
+                    "steady",
+                    "Build gradually",
+                    "A balanced pace with small increases from session to session.",
+                ),
+                (
+                    "strength",
+                    "Focus on strength",
+                    "More demanding variations and progressive training volume.",
+                ),
+            )
+            if self.language == "en"
+            else (
+                (
+                    "gentle",
+                    "Начать мягко",
+                    "Короткие подходы, простые варианты и больше восстановления.",
+                ),
+                (
+                    "steady",
+                    "Наращивать постепенно",
+                    "Ровный темп с небольшим усилением от тренировки к тренировке.",
+                ),
+                (
+                    "strength",
+                    "Сделать упор на силу",
+                    "Более сложные варианты и постепенно растущий объём работы.",
+                ),
+            )
+        )
+        styles = self._training_answer_options(
+            style_options,
+            self.training_style_choice,
+            self._training_style_selected,
+        )
+        styles.set_visible(step == 1)
+        self.training_body.append(styles)
+
         duration_card = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=13,
             css_classes=["card", "training-duration-card", "training-plan-builder"],
         )
+        duration_card.set_visible(step in (2, 3, 4))
         duration_copy = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=4,
@@ -5283,6 +5719,7 @@ class MainWindow(Adw.ApplicationWindow):
             )
         )
         duration_card.append(duration_copy)
+        duration_copy.set_visible(step == 4)
         durations = Gtk.Box(
             spacing=7,
             homogeneous=True,
@@ -5301,6 +5738,7 @@ class MainWindow(Adw.ApplicationWindow):
             button.connect("toggled", self._training_duration_selected, days)
             durations.append(button)
         duration_card.append(durations)
+        durations.set_visible(step == 4)
 
         weekly_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         weekly_copy.append(
@@ -5323,6 +5761,7 @@ class MainWindow(Adw.ApplicationWindow):
             )
         )
         duration_card.append(weekly_copy)
+        weekly_copy.set_visible(step == 2)
         weekly_options = Gtk.Box(
             spacing=7,
             homogeneous=True,
@@ -5348,26 +5787,27 @@ class MainWindow(Adw.ApplicationWindow):
             button.connect("toggled", self._training_weekday_selected, weekday)
             weekly_options.append(button)
         duration_card.append(weekly_options)
-        duration_card.append(
-            Gtk.Label(
-                label=(
-                    f"Selected: {self._weekday_names(self.training_weekdays_choice, short=False)}"
-                    if self.language == "en"
-                    else f"Выбрано: {self._weekday_names(self.training_weekdays_choice, short=False)}"
-                ),
-                xalign=0,
-                wrap=True,
-                css_classes=["training-weekday-summary", "muted", "caption"],
-            )
+        weekly_options.set_visible(step == 2)
+        self.training_weekday_summary = Gtk.Label(
+            label=(
+                f"Selected: {self._weekday_names(self.training_weekdays_choice, short=False)}"
+                if self.language == "en"
+                else f"Выбрано: {self._weekday_names(self.training_weekdays_choice, short=False)}"
+            ),
+            xalign=0,
+            wrap=True,
+            css_classes=["training-weekday-summary", "muted", "caption"],
         )
+        self.training_weekday_summary.set_visible(step == 2)
+        duration_card.append(self.training_weekday_summary)
 
-        duration_card.append(
-            Gtk.Label(
-                label="Preparation level" if self.language == "en" else "Уровень подготовки",
-                xalign=0,
-                css_classes=["card-title"],
-            )
+        level_title = Gtk.Label(
+            label="Preparation level" if self.language == "en" else "Уровень подготовки",
+            xalign=0,
+            css_classes=["card-title"],
         )
+        level_title.set_visible(step == 3)
+        duration_card.append(level_title)
         levels = self._responsive_flow("training-level-options", columns=2, spacing=8)
         levels.set_min_children_per_line(2)
         first_level: Gtk.ToggleButton | None = None
@@ -5398,6 +5838,7 @@ class MainWindow(Adw.ApplicationWindow):
             button.set_active(level_id == self.training_fitness_choice)
             button.connect("toggled", self._training_level_selected, level_id)
             levels.append(button)
+        levels.set_visible(step == 3)
         duration_card.append(levels)
         chosen_level = FITNESS_LEVELS[self.training_fitness_choice]
         self.training_level_summary = Gtk.Label(
@@ -5412,102 +5853,24 @@ class MainWindow(Adw.ApplicationWindow):
             wrap=True,
             css_classes=["training-level-summary", "muted", "caption"],
         )
+        self.training_level_summary.set_visible(step == 3)
         duration_card.append(self.training_level_summary)
-        duration_card.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
-        duration_card.append(self._training_reminder_settings())
+        reminder_separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        reminder_separator.set_visible(step == 4)
+        duration_card.append(reminder_separator)
+        reminder_settings = self._training_reminder_settings()
+        reminder_settings.set_visible(step == 4)
+        duration_card.append(reminder_settings)
         self.training_body.append(duration_card)
-        self.training_body.append(self._training_safety_card())
 
-        self.training_body.append(
-            Gtk.Label(
-                label="Choose a focus" if self.language == "en" else "Выберите направление",
-                xalign=0,
-                css_classes=["section-title"],
-            )
-        )
-        course_items = list(COURSES.items())
-        if course_items:
-            featured_id, featured_course = course_items[0]
-            featured = self._training_course_card(featured_id, featured_course)
-            featured.add_css_class("training-course-featured")
-            self.training_body.append(featured)
-        courses = self._responsive_flow("training-course-flow", columns=2, spacing=12)
-        for course_id, course in course_items[1:]:
-            courses.append(self._training_course_card(course_id, course))
-        self.training_body.append(courses)
+        recommendation = self._training_recommendation_card()
+        recommendation.set_visible(step == 5)
+        self.training_body.append(recommendation)
+        safety = self._training_safety_card()
+        safety.set_visible(step == 5)
+        self.training_body.append(safety)
 
-        history = self.app.db.training_history()
-        if history:
-            history_card = Gtk.Box(
-                orientation=Gtk.Orientation.VERTICAL,
-                spacing=8,
-                css_classes=["card", "training-history-card"],
-            )
-            history_card.append(
-                Gtk.Label(
-                    label="Course history" if self.language == "en" else "История курсов",
-                    xalign=0,
-                    css_classes=["section-title"],
-                )
-            )
-            for row in history[:5]:
-                course = COURSES.get(str(row["course_id"]))
-                if not course:
-                    continue
-                item = Gtk.Box(spacing=10, css_classes=["training-history-row"])
-                item.append(activity_icon(str(course["icon"]), 20))
-                copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
-                copy.append(
-                    Gtk.Label(
-                        label=training_copy(course, "title", self.language),
-                        xalign=0,
-                        css_classes=["card-title"],
-                    )
-                )
-                completed = int(row["completed_days"] or 0)
-                total = int(row["duration_days"])
-                copy.append(
-                    Gtk.Label(
-                        label=(
-                            f"{completed} of {total} days completed"
-                            if self.language == "en"
-                            else f"Завершено дней: {completed} из {total}"
-                        ),
-                        xalign=0,
-                        css_classes=["muted", "caption"],
-                    )
-                )
-                item.append(copy)
-                if int(row["is_active"]):
-                    history_action = Gtk.Button(
-                        label="Open" if self.language == "en" else "Открыть",
-                        css_classes=["data-button"],
-                    )
-                    history_action.connect("clicked", self._show_active_training)
-                    item.append(history_action)
-                elif row["completed_at"] is None:
-                    history_action = Gtk.Button(
-                        label="Continue" if self.language == "en" else "Продолжить",
-                        css_classes=["data-button"],
-                    )
-                    history_action.connect(
-                        "clicked",
-                        lambda _button, saved=row: self._training_existing_dialog(
-                            saved,
-                            active_course=False,
-                        ),
-                    )
-                    item.append(history_action)
-                else:
-                    item.append(
-                        Gtk.Label(
-                            label="Completed" if self.language == "en" else "Завершён",
-                            css_classes=["training-history-status"],
-                        )
-                    )
-                history_card.append(item)
-            self.training_body.append(history_card)
-        self.training_body.append(self._training_calendar_card())
+        self.training_body.append(self._training_setup_actions())
 
     def _training_calendar_card(self) -> Gtk.Widget:
         card = Gtk.Box(
@@ -5793,93 +6156,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.training_calendar_month = date.today().replace(day=1)
         self._rebuild_training()
 
-    def _training_course_card(self, course_id: str, course: dict[str, Any]) -> Gtk.Widget:
-        card = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL,
-            spacing=10,
-            css_classes=["card", "training-course-card"],
-        )
-        card.append(self._training_course_visual(course, days_per_week=self.training_days_choice))
-        card.append(
-            Gtk.Label(
-                label=training_copy(course, "subtitle", self.language),
-                xalign=0,
-                wrap=True,
-                css_classes=["training-course-subtitle"],
-            )
-        )
-        card.append(
-            Gtk.Label(
-                label=training_copy(course, "description", self.language),
-                xalign=0,
-                wrap=True,
-                max_width_chars=50,
-                vexpand=True,
-                css_classes=["muted", "caption"],
-            )
-        )
-        rhythm = Gtk.Box(spacing=6, css_classes=["training-week-rhythm"])
-        kinds = [
-            kind
-            for kind, _session in weekly_pattern(
-                self.training_days_choice,
-                weekdays=self.training_weekdays_choice,
-            )
-        ]
-        rhythm_items = [
-            (
-                f"{kinds.count('strength')} strength"
-                if self.language == "en"
-                else f"{kinds.count('strength')} силовых",
-                "strength",
-            )
-        ]
-        lighter_count = kinds.count("recovery") + kinds.count("mobility")
-        if lighter_count:
-            rhythm_items.append(
-                (
-                    f"{lighter_count} lighter" if self.language == "en" else f"{lighter_count} лёгких",
-                    "lighter",
-                )
-            )
-        rhythm_items.append(
-            (
-                f"{kinds.count('rest')} rest" if self.language == "en" else f"{kinds.count('rest')} отдых",
-                "rest",
-            )
-        )
-        for label, style in rhythm_items:
-            rhythm.append(
-                Gtk.Label(
-                    label=label,
-                    css_classes=["training-rhythm-chip", f"training-rhythm-{style}"],
-                )
-            )
-        card.append(rhythm)
-        equipment = Gtk.Box(spacing=7, css_classes=["training-equipment"])
-        equipment.append(Gtk.Image.new_from_icon_name("applications-engineering-symbolic"))
-        equipment.append(
-            Gtk.Label(
-                label=training_copy(course, "equipment", self.language),
-                xalign=0,
-                wrap=True,
-                css_classes=["caption"],
-            )
-        )
-        card.append(equipment)
-        button = Gtk.Button(
-            label=(
-                f"Start {self.training_duration_choice}-day course"
-                if self.language == "en"
-                else f"Начать курс на {self.training_duration_choice} дней"
-            ),
-            css_classes=["health-primary", "training-course-start"],
-        )
-        button.connect("clicked", self._start_training_course, course_id)
-        self.training_course_start_buttons.append(button)
-        card.append(button)
-        return card
-
     def _training_reminder_settings(self) -> Gtk.Widget:
         settings = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
@@ -5993,10 +6269,6 @@ class MainWindow(Adw.ApplicationWindow):
             self.training_duration_choice = int(days)
             self.app.config.data["training_duration_days"] = int(days)
             self.app.config.save()
-            for start_button in getattr(self, "training_course_start_buttons", []):
-                start_button.set_label(
-                    f"Start {days}-day course" if self.language == "en" else f"Начать курс на {days} дней"
-                )
 
     def _training_weekday_selected(self, button: Gtk.ToggleButton, weekday: int) -> None:
         if getattr(self, "_syncing_training_weekdays", False):
@@ -6021,7 +6293,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.app.config.data["training_weekdays"] = list(self.training_weekdays_choice)
         self.app.config.data["training_days_per_week"] = self.training_days_choice
         self.app.config.save()
-        GLib.idle_add(self._rebuild_training)
+        if hasattr(self, "training_weekday_summary"):
+            self.training_weekday_summary.set_text(
+                f"Selected: {self._weekday_names(self.training_weekdays_choice, short=False)}"
+                if self.language == "en"
+                else f"Выбрано: {self._weekday_names(self.training_weekdays_choice, short=False)}"
+            )
 
     def _training_level_selected(self, button: Gtk.ToggleButton, level: str) -> None:
         if not button.get_active() or level not in FITNESS_LEVELS:
@@ -6089,11 +6366,11 @@ class MainWindow(Adw.ApplicationWindow):
             "This course already has progress" if self.language == "en" else "В этом курсе уже есть прогресс",
             (
                 f"{training_copy(course, 'title', self.language)} is on day {int(enrollment['current_day'])}. "
-                "Continue with its saved settings, or reset it and use the choices above. Reset permanently removes this course’s completed days. "
+                "Continue with its saved settings, or reset it and use the questionnaire choices. Reset permanently removes this course’s completed days. "
                 "If another course is active, it will be paused and its history will remain."
                 if self.language == "en"
                 else f"Курс «{training_copy(course, 'title', self.language)}» находится на дне {int(enrollment['current_day'])}. "
-                "Можно продолжить с сохранёнными настройками или сбросить его и применить выбранные выше параметры. Сброс навсегда удалит выполненные дни этого курса. "
+                "Можно продолжить с сохранёнными настройками или сбросить его и применить ответы анкеты. Сброс навсегда удалит выполненные дни этого курса. "
                 "Если активен другой курс, он будет поставлен на паузу, а его история сохранится."
             ),
         )
@@ -6310,7 +6587,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.training_available = self.app.db.training_available_today(enrollment_id)
 
         back = Gtk.Button(
-            label="Back to plan selection" if self.language == "en" else "К выбору плана",
+            label="Change course" if self.language == "en" else "Сменить курс",
             halign=Gtk.Align.START,
             css_classes=["data-button", "training-back-button"],
         )
@@ -8760,7 +9037,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _page_changed(self, _stack: Gtk.Stack, _pspec: Any) -> None:
         if self.stack.get_visible_child_name() == "training":
-            self.training_view = "catalog"
+            self.training_view = "active" if self.app.db.active_training() is not None else "setup"
+            if self.training_view == "setup":
+                self.training_setup_step = 0
             self._rebuild_training()
         self.refresh(rebuild_lists=True)
 

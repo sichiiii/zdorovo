@@ -946,6 +946,83 @@ scrollbar.horizontal slider {
 }
 
 /* Training courses */
+.training-setup-head { padding: 15px 16px; }
+.training-setup-progress { min-width: 0; }
+.training-setup-progress-item {
+  min-height: 52px;
+  padding: 7px 5px;
+  color: #77738d;
+  background: rgba(255,255,255,0.36);
+  border: 1px solid rgba(50,127,121,0.09);
+  border-radius: 9px;
+}
+.training-setup-progress-item.complete {
+  color: #327F79;
+  background: rgba(50,127,121,0.08);
+}
+.training-setup-progress-item.current {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+.training-setup-progress-number { font-size: 15px; font-weight: 850; }
+.training-setup-progress-label { font-size: 11px; font-weight: 720; }
+.training-setup-question { font-size: 19px; }
+.training-setup-copy { font-size: 13px; }
+.training-setup-actions { margin-top: 0; }
+.training-setup-primary { min-width: 170px; }
+.training-answer-options,
+.training-recommendation-facts { background: transparent; }
+.training-answer-options flowboxchild,
+.training-recommendation-facts flowboxchild {
+  min-width: 230px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.training-answer-button {
+  min-height: 88px;
+  padding: 13px 14px;
+  color: #4d485e;
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(50,127,121,0.13);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.training-answer-button:hover {
+  color: #315f5b;
+  background: rgba(255,255,255,0.80);
+  border-color: rgba(50,127,121,0.28);
+}
+.training-answer-button:checked {
+  color: #244f4b;
+  background: rgba(50,127,121,0.12);
+  border: 2px solid #327F79;
+  box-shadow: inset 0 1px rgba(255,255,255,0.55);
+}
+.training-recommendation-card { padding: 14px; }
+.training-recommendation-title {
+  color: #2b2941;
+  font-size: 22px;
+  font-weight: 850;
+}
+.training-recommendation-description { color: #545066; font-size: 14px; }
+.training-recommendation-reason {
+  margin-top: 3px;
+  padding: 10px 12px;
+  color: #315f5b;
+  background: rgba(50,127,121,0.075);
+  border: 1px solid rgba(50,127,121,0.13);
+  border-radius: 9px;
+}
+.training-recommendation-fact {
+  min-height: 48px;
+  padding: 9px 11px;
+  background: rgba(50,127,121,0.065);
+  border: 1px solid rgba(50,127,121,0.10);
+  border-radius: 9px;
+}
 .training-safety-card {
   padding: 12px 14px;
   color: #425e5b;
@@ -1024,32 +1101,6 @@ scrollbar.horizontal slider {
 }
 .training-reminder-time-title { font-weight: 760; }
 .training-active-reminders { padding: 13px 15px; }
-.training-active-banner {
-  padding: 12px 14px;
-  background: rgba(50,127,121,0.09);
-  border: 1px solid rgba(50,127,121,0.16);
-  border-radius: 11px;
-}
-.training-active-banner-icon {
-  min-width: 42px;
-  min-height: 42px;
-  color: #327F79;
-  background: rgba(255,255,255,0.66);
-  border: 1px solid rgba(255,255,255,0.88);
-  border-radius: 9px;
-}
-.training-course-flow { background: transparent; }
-.training-course-flow flowboxchild {
-  min-width: 380px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-.training-course-card {
-  min-height: 0;
-  padding: 10px;
-}
 .training-course-visual {
   min-height: 92px;
   padding: 12px;
@@ -1152,7 +1203,6 @@ scrollbar.horizontal slider {
   border-radius: 7px;
 }
 .training-equipment image { color: #327F79; -gtk-icon-size: 15px; }
-.training-course-start { min-height: 36px; }
 .training-history-card { padding: 14px 16px; }
 .training-history-row {
   padding: 8px 0;
@@ -1914,6 +1964,44 @@ button.training-calendar-day:hover {
   background: rgba(255,255,255,0.065);
   border-color: rgba(255,255,255,0.10);
 }
+.dark-mode .training-setup-progress-item {
+  color: #aaa0a4;
+  background: rgba(255,255,255,0.035);
+  border-color: rgba(255,255,255,0.07);
+}
+.dark-mode .training-setup-progress-item.complete {
+  color: #9ED8D2;
+  background: rgba(50,127,121,0.12);
+}
+.dark-mode .training-setup-progress-item.current {
+  color: white;
+  background: #327F79;
+  border-color: #327F79;
+}
+.dark-mode .training-answer-button {
+  color: #e5dde0;
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(255,255,255,0.09);
+  box-shadow: none;
+}
+.dark-mode .training-answer-button:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(158,216,210,0.18);
+}
+.dark-mode .training-answer-button:checked {
+  color: #f3f8f7;
+  background: rgba(50,127,121,0.15);
+  border-color: #9ED8D2;
+  box-shadow: none;
+}
+.dark-mode .training-recommendation-title { color: #f3edef; }
+.dark-mode .training-recommendation-description { color: #c8bec2; }
+.dark-mode .training-recommendation-reason,
+.dark-mode .training-recommendation-fact {
+  color: #cde7e4;
+  background: rgba(50,127,121,0.11);
+  border-color: rgba(158,216,210,0.11);
+}
 .dark-mode .training-visual-kicker { color: #9ED8D2; }
 .dark-mode .training-visual-title { color: #f5eff1; }
 .dark-mode .training-plan-slot { background: rgba(255,255,255,0.055); }
@@ -1936,15 +2024,6 @@ button.training-calendar-day:hover {
   color: #eaf7f5;
   background: rgba(50,127,121,0.17);
   border: 2px solid #9ED8D2;
-}
-.dark-mode .training-active-banner {
-  background: rgba(50,127,121,0.13);
-  border-color: rgba(158,216,210,0.14);
-}
-.dark-mode .training-active-banner-icon {
-  color: #9ED8D2;
-  background: rgba(255,255,255,0.065);
-  border-color: rgba(255,255,255,0.10);
 }
 .dark-mode .training-course-subtitle { color: #d8ced2; }
 .dark-mode .training-rhythm-chip {
